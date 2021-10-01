@@ -101,6 +101,13 @@ document.addEventListener('DOMContentLoaded', () => {
         // enviando nossas midias para a outra ponta
         state.peerConnection.addTrack(state.stream.getTracks()[0], state.stream); // trilha de audio
         state.peerConnection.addTrack(state.stream.getTracks()[1], state.stream); // trilha de video
+
+        // criando oferta
+        state.peerConnection.createOffer(()=>{
+
+        }).then({}).catch({
+           
+        });
     });
     socket.on('candidate', () => {});
     socket.on('offer', () => {});
