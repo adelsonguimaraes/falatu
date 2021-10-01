@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Room</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="box">
+        <div class="header">
+            <div class="my-cam">
+                MyCAM
+                <video id="my-cam"></video>
+            </div>
+            <div class="right-logo">
+                <img src="./assets/images/logo.png">
+            </div>
+        </div>
+        <div class="outher">
+            OutherCAM
+            <video id="outher-cam"></video>
+        </div>
+        <div class="buttons-cam">
+            <button class="btn-cam"></button>
+            <button class="btn-mic"></button>
+            <button class="btn-exit"></button>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="./room.js"></script>
+</body>
+</html>
