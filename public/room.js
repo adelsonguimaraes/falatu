@@ -47,6 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // check the room session
     let r = sessionStorage.getItem('room');
+    
     if (typeof(r) !== 'string') {
         // check the room parameter
         r = window.location.hash.replace('#', '');
@@ -59,14 +60,13 @@ document.addEventListener('DOMContentLoaded', () => {
         slug = r;
     }else{
         // conectando ao servidor
-        slug = r.trim().replace(' ', '_').toLowerCase();
+        slug = r.trim().toLowerCase().replace(' ', '_');
     }
 
 
     // reforce hash
     window.location.hash = '#' + slug;
 
-    
     socket.emit('join', slug);
 
     // get user media function
@@ -91,21 +91,34 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error(err);
         });
     };
+
+    playAudio = (a) => {
+        const audio = new Audio();
+        audio.volume = .5;
+        audio.src = './assets/audio/'+a+'.mp3';
+        audio.play();
+    };
     
     // events socket from server response
     socket.on('created', () => {
         state.creator = true;
         getMyUserMedia();
+        // effect audio
+        playAudio('join');
     });
     socket.on('joined', () => {
         state.creator = false;
         getMyUserMedia();
+        playAudio('join');
     });
     socket.on('full', () => {
-        alert("Room is Full, Can't Join");
+        alert("Opa! A sala atingiu o total suportado!");
         return window.location.replace('/');
     });
     socket.on('ready', () => {
+        
+        playAudio('outher_join');
+        
         alert('Um parceiro chegou!');
 
         if (state.creator) {
@@ -221,6 +234,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     socket.on('leave', () => {
+
+        playAudio('outher_disconnect');
+
         alert('O parceiro se desconectou, você é novo dono da sala!');
         state.creator = true;
         // stopMyStream(); // forçando a saída da sala
