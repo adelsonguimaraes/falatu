@@ -78,6 +78,6 @@ io.on('connection', (socket) => {
     // recebendo sinal de sair da sala
     socket.on('leave', (r) => {
         socket.leave(r);
-        socket.broadcast.to(r).emit('leave')
+        socket.broadcast.to(r).emit('leave');
     });
 });

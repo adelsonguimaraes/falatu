@@ -43,15 +43,25 @@ document.addEventListener('DOMContentLoaded', () => {
         (state.mymic) ? btnMic.classList.remove('btn-mic-active') : btnMic.classList.add('btn-mic-active');
     });
 
-    // check the room parameter
-    const r = sessionStorage.getItem('room');
+    let slug = '';
+
+    // check the room session
+    let r = sessionStorage.getItem('room');
     if (typeof(r) !== 'string') {
-        alert('A sala não é válida!');
-        return window.location.replace('/');
+        // check the room parameter
+        r = window.location.hash.replace('#', '');
+        if (r==='') {
+            alert('A sala não é válida!');
+            return window.location.replace('/');
+        }
+
+        sessionStorage.setItem('room', r);
+        slug = r;
+    }else{
+        // conectando ao servidor
+        slug = r.trim().replace(' ', '_').toLowerCase();
     }
 
-    // conectando ao servidor
-    const slug = r.trim().replace(' ', '_').toLowerCase();
 
     // reforce hash
     window.location.hash = '#' + slug;
@@ -96,6 +106,8 @@ document.addEventListener('DOMContentLoaded', () => {
         return window.location.replace('/');
     });
     socket.on('ready', () => {
+        alert('Um parceiro chegou!');
+
         if (state.creator) {
             state.peerConnection = new RTCPeerConnection(iceServers);
             state.peerConnection.onicecandidate = OnIceCandidateFunction;
