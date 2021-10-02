@@ -21,25 +21,26 @@ document.addEventListener('DOMContentLoaded', () => {
     const iceServers = {
         iceServers: [
             { urls: 'stun:stun.services.mozilla.com' },
-            { urls: 'stun1.l.google.com:19302' }
+            { urls: 'stun:stun.l.google.com:19302' }
         ]
     };
 
     // cam
     btnCam.addEventListener('click', () => {
         state.mycam = !state.mycam;
-        (state.mycam) ? btnCam.classList.remove('btn-cam-active') : btnCam.classList.add('btn-cam-active');
+        state.stream.getTracks()[1].enabled = !state.stream.getTracks()[1].enabled;
+        if (state.mycam) {
+            btnCam.classList.remove('btn-cam-active');
+        }else{
+            btnCam.classList.add('btn-cam-active');
+        }
     });
 
     // mic
     btnMic.addEventListener('click', () => {
         state.mymic = !state.mymic;
+        state.stream.getTracks()[0].enabled = !state.stream.getTracks()[0].enabled;
         (state.mymic) ? btnMic.classList.remove('btn-mic-active') : btnMic.classList.add('btn-mic-active');
-    });
-
-    // exit
-    btnExit.addEventListener('click', () => {
-        console.log('caindo fora');
     });
 
     // check the room parameter
@@ -62,7 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
     getMyUserMedia = () => {
         // media user
         navigator.mediaDevices.getUserMedia({
-            audio: false,
+            audio: true,
             video: true
         }).then((stream) => {
             // adicionando a minha stream dentro da state
@@ -73,6 +74,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 mycam.play();
             }
 
+            // quando a segunda pessoa entra
             socket.emit('ready', slug);
 
         }).catch((err) => {
@@ -94,24 +96,67 @@ document.addEventListener('DOMContentLoaded', () => {
         return window.location.replace('/');
     });
     socket.on('ready', () => {
-        state.peerConnection = new RTCPeerConnection(iceServers);
-        state.peerConnection.onicecandidate = OnIceCandidateFunction;
-        // escutando recebimento de mídia da outra ponta
-        state.peerConnection.ontrack = OnTrackFunction;
-        // enviando nossas midias para a outra ponta
-        state.peerConnection.addTrack(state.stream.getTracks()[0], state.stream); // trilha de audio
-        state.peerConnection.addTrack(state.stream.getTracks()[1], state.stream); // trilha de video
+        if (state.creator) {
+            state.peerConnection = new RTCPeerConnection(iceServers);
+            state.peerConnection.onicecandidate = OnIceCandidateFunction;
+            // escutando recebimento de mídia da outra ponta
+            state.peerConnection.ontrack = OnTrackFunction;
+            
+            state.peerConnection.addTrack(state.stream.getTracks()[0], state.stream);
+            state.peerConnection.addTrack(state.stream.getTracks()[1], state.stream);
 
-        // criando oferta
-        state.peerConnection.createOffer(()=>{
-
-        }).then({}).catch({
-           
-        });
+            // enviando nossas midias para a outra ponta
+            // for (const track of state.stream.getTracks()) {
+            //     state.peerConnection.addTrack(track, state.stream);
+            // }
+            
+            // criando oferta
+            state.peerConnection.createOffer()
+            .then((offer) => {
+                state.peerConnection.setLocalDescription(offer);
+                socket.emit('offer', offer, r);
+            })
+            .catch((err) => {
+                console.error(err);
+            });
+        }
     });
-    socket.on('candidate', () => {});
-    socket.on('offer', () => {});
-    socket.on('answer', () => {});
+    socket.on('candidate', (cadidate) => {
+        console.log('RECEBENDO CANDIDATO');
+        const iceCandidate = new RTCIceCandidate(cadidate);
+        state.peerConnection.addIceCandidate(iceCandidate);
+    });
+    socket.on('offer', (offer) => {
+        if (!state.creator) {
+            state.peerConnection = new RTCPeerConnection(iceServers);
+            state.peerConnection.onicecandidate = OnIceCandidateFunction;
+            // escutando recebimento de mídia da outra ponta
+            state.peerConnection.ontrack = OnTrackFunction;
+
+            state.peerConnection.addTrack(state.stream.getTracks()[0], state.stream);
+            state.peerConnection.addTrack(state.stream.getTracks()[1], state.stream);
+            
+            // enviando nossas midias para a outra ponta
+            // for (const track of state.stream.getTracks()) {
+            //     state.peerConnection.addTrack(track, state.stream);
+            // }
+
+            state.peerConnection.setRemoteDescription(offer);
+            
+            // criando resposta
+            state.peerConnection.createAnswer()
+            .then((answer) => {
+                state.peerConnection.setLocalDescription(answer);
+                socket.emit('answer', answer, r);
+            })
+            .catch((err) => {
+                console.error(err);
+            });
+        }
+    });
+    socket.on('answer', (answer) => {
+        state.peerConnection.setRemoteDescription(answer);
+    });
 
     OnIceCandidateFunction = (event) => {
         // check candidate in event   
@@ -122,9 +167,51 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // acionanda quando há fluxo de mídia no canal da outra ponta
     OnTrackFunction = (event) => {
+        // const remote = new MediaStream();
+        // outhercam.srcObject = remote;
         outhercam.srcObject = event.streams[0];
+        // remote.addTrack(event.track)
         outhercam.onloadedmetadata = (e) => {
             outhercam.play();
         }
     };
+
+    stopMyStream = () => {
+        if (mycam.srcObject) {
+            mycam.srcObject.getTracks()[0].stop();
+            mycam.srcObject.getTracks()[1].stop();
+        }
+
+        sessionStorage.removeItem('room');
+        window.location.replace('/');
+    };
+
+    stopOutherStream = () => {
+        if (outhercam.srcObject) {
+            outhercam.srcObject.getTracks()[0].stop();
+            outhercam.srcObject.getTracks()[1].stop();
+            outhercam.srcObject = null;
+        };
+
+        if (state.peerConnection) {
+            state.peerConnection.ontrack = null;
+            state.peerConnection.onicecandidate = null;
+            state.peerConnection.close();
+            state.peerConnection = null;
+        };
+    };
+
+    // exit
+    btnExit.addEventListener('click', () => {
+        socket.emit('leave', slug);
+        stopMyStream();
+        stopOutherStream();
+    });
+
+    socket.on('leave', () => {
+        alert('O parceiro se desconectou, você é novo dono da sala!');
+        state.creator = true;
+        // stopMyStream(); // forçando a saída da sala
+        stopOutherStream();
+    });
 });

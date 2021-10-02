@@ -51,23 +51,33 @@ io.on('connection', (socket) => {
         console.log(rooms);
     });
 
+    // recebendo o sinal de pronto
     socket.on('ready', (r) => {
-        console.log('Ready');
+        // repassando o sinal de pronto
         socket.broadcast.to(r).emit('ready');
     });
 
+    // recendendo o candidato
     socket.on('candidate', (c, r) => {
-        console.log('Candidate');
-        socket.broadcas.to(r).emit('cadidate', c);
+        // enviando o candidato para o parceiro
+        socket.broadcast.to(r).emit('candidate', c);
     });
 
+    // recebendo a oferta
     socket.on('offer', (o, r) => {
-        console.log('Offer');
-        socket.broadcas.to(r).emit('offer', o);
+        // repassando a oferta
+        socket.broadcast.to(r).emit('offer', o);
     });
 
+    // recebendo a resposta
     socket.on('answer', (a, r) => {
-        console.log('Answer');
-        socket.broadcas.to(r).emit('answer', a);
+        // repassando a resposta pro parceiro
+        socket.broadcast.to(r).emit('answer', a);
     })
+
+    // recebendo sinal de sair da sala
+    socket.on('leave', (r) => {
+        socket.leave(r);
+        socket.broadcast.to(r).emit('leave')
+    });
 });
