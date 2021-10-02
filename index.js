@@ -1,7 +1,7 @@
 const express = require('express');
 const http = require('http');
 
-const PORT = 4000;
+const PORT =  process.env.PORT || 4000;
 
 const app = express();
 const server = http.createServer(app);
@@ -9,12 +9,12 @@ const io = require('socket.io')(server);
 
 app.use(express.static('public'));
 
-app.get('/', (req, res) => {
-    res.sendFile(__dirname + '/public/index.html');
+app.get("/", (req, res) => {
+    res.sendFile(__dirname + "/public/index.html");
 });
 
-app.get('/room', (req, res) => {
-    res.sendFile(__dirname + '/public/room.html');
+app.get("/room", (req, res) => {
+    res.sendFile(__dirname + "/public/room.html");
 });
 
 server.listen(PORT, () => {
