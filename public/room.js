@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnExit = document.querySelector('.btn-exit');
     const mycam = document.querySelector('.my-cam video');
     const outhercam = document.querySelector('.outher video');
+    const notification = document.querySelector('.notification');
 
     // ice servers
     const iceServers = {
@@ -23,6 +24,19 @@ document.addEventListener('DOMContentLoaded', () => {
             { urls: 'stun:stun.services.mozilla.com' },
             { urls: 'stun:stun.l.google.com:19302' }
         ]
+    };
+
+    let notificationTime = null;
+    showNotification = (msg) => {
+        if (notificationTime!=null) {
+            clearTimeout(notificationTime);
+        }
+
+        notification.innerHTML = msg;
+        notification.classList.add('notification-active');
+        notificationTime = setTimeout(()=>{
+            notification.classList.remove('notification-active');
+        }, [4000]);
     };
 
     // cam
@@ -88,6 +102,9 @@ document.addEventListener('DOMContentLoaded', () => {
             socket.emit('ready', slug);
 
         }).catch((err) => {
+            alert('Não foi possível acessar a Câmera!');
+            stopMyStream();
+
             console.error(err);
         });
     };
@@ -119,7 +136,8 @@ document.addEventListener('DOMContentLoaded', () => {
         
         playAudio('outher_join');
         
-        alert('Um parceiro chegou!');
+        // alert('Um parceiro chegou!');
+        showNotification('Um parceiro chegou!');
 
         if (state.creator) {
             state.peerConnection = new RTCPeerConnection(iceServers);
@@ -237,7 +255,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         playAudio('outher_disconnect');
 
-        alert('O parceiro se desconectou, você é novo dono da sala!');
+        // alert('O parceiro se desconectou, você é novo dono da sala!');
+        showNotification('O parceiro se desconectou, você é novo dono da sala!');
         state.creator = true;
         // stopMyStream(); // forçando a saída da sala
         stopOutherStream();

@@ -163,3 +163,22 @@ button:hover {
     background-position: center;
     background-size: 50px;
 }
+
+.notification {
+    position: fixed;
+    bottom: -100px;
+    left: 10%;
+    z-index: 1;
+    color: #fff;
+    width: 80%;
+    margin: 0 auto;
+    background-color: #de5124;
+    text-align: center;
+    padding: 10px;
+    border-radius: 5px;
+    font-weight: bold;
+    transition: .5s;
+}
+.notification-active {
+    bottom: 25%;
+}
