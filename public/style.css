@@ -103,10 +103,10 @@ button:hover {
 }
 
 .outher {
-    height: 400px;
+    /* height: 400px; */
     background-color: black;
     border-radius: 10px;
-    width: 90%;
+    /* width: 90%; */
     color: #fff;
     padding: 5px;
     display: flex;
@@ -156,6 +156,12 @@ button:hover {
 .btn-mic-active {
     background-image: url(./assets/images/btn_mic.png) !important;
 }
+.buttons-cam .btn-screen {
+    background-image: url(./assets/images/btn_screen.png);
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 55px;
+}
 
 .buttons-cam .btn-exit {
     background-image: url(./assets/images/btn_exit.png);
@@ -182,3 +188,47 @@ button:hover {
 .notification-active {
     bottom: 25%;
 }
+.outhers {
+    display: flex;
+    width: 90%;
+    height: 60%;
+    flex-wrap: wrap;
+    flex-direction: row;
+    background-color: #26203e;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+/* .multicam {
+    width: 160px;
+    height: 180px;
+    background-color: aliceblue;
+    margin: 5px 5px;
+} */
+
+.multicam {
+    flex: 200px 1;
+    /* background-color: aliceblue; */
+    margin: 5px 5px;
+    align-self: stretch;
+    cursor: pointer;
+}
+/* 
+.multicam2 {
+    flex: 170px 1;
+    background-color: aliceblue;
+    margin: 5px 5px;
+    align-self: stretch;
+} */
+
+@media (min-width: 520px)  {
+    .outhers {
+        flex-direction: row;
+    }
+}
+
+/* @media (min-width: 1023px)  {
+    .multicam {
+        min-height: 90%;
+    }
+} */

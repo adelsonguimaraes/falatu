@@ -30,6 +30,10 @@ io.on('connection', (socket) => {
         const rooms = io.sockets.adapter.rooms;
         const room = rooms.get(r);
 
+        const pcId = (room===undefined) ? 0 : room.size;
+
+        console.log('size', pcId);
+
         // if room undefined, create room
         if (room === undefined) {
             // adicioando o socket a sala
@@ -40,7 +44,7 @@ io.on('connection', (socket) => {
             console.log('Room Created');
 
         // if room 1 people, joining room
-        }else if (room.size<=4) {
+        }else if (room.size<=2) {
             // adicionando o socket a sala
             socket.join(r);
             // enviando sinal para o socket
@@ -59,42 +63,51 @@ io.on('connection', (socket) => {
         console.log(rooms);
     });
 
+    socket.on('welcome', (data) => {
+        socket.broadcast.to(data.pcId).emit('welcome', {
+            pcId: socket.id
+        });
+    });
+
+    socket.on('process', (data) => {
+        socket.broadcast.to(data.pcId).emit('process', {
+            message: data.message,
+            pcId: socket.id
+        });
+    })
+
     // recebendo o sinal de pronto
     socket.on('ready', (r, pcId) => {
-        // enviando para toda a sala nosso id de conexão
-        // assim os outros parares podem nos ofertar uma conexão
-        socket.broadcast.to(r).emit('ready', socket.id);
+        // repassando o sinal para todos conectados na sala to(sala)
+        // (broadcast) sinal pra todos menos quem envia
+        socket.broadcast.to(r).emit('ready', pcId);
     });
 
     // recendendo o candidato
-    socket.on('candidate', (c, pcId) => {
-        // recebendo o icecandidate de um par e repassando para a outra ponta
-        socket.broadcast.to(pcId).emit('candidate', c, socket.id);
+    socket.on('candidate', (c, r, pcId) => {
+        // repassando o sinal para todos conectados na sala to(sala)
+        // (broadcast) sinal pra todos menos quem envia
+        socket.broadcast.to(r).emit('candidate', c, pcId);
     });
 
     // recebendo a oferta
-    socket.on('offer', (o, pcId) => {
-        // repassando a oferta para a outra ponta com nosso id de conexão
-        socket.broadcast.to(pcId).emit('offer', o, socket.id);
-    });
-
-    // recebendo a oferta
-    socket.on('offer-screen-sharing', (o, pcId) => {
-        // repassando a oferta para a outra ponta com nosso id de conexão
-        socket.broadcast.to(pcId).emit('offer-screen-sharing', o, socket.id);
-        console.log(pcId, socket.id);
+    socket.on('offer', (o, r, pcId) => {
+        // repassando o sinal para todos conectados na sala to(sala)
+        // (broadcast) sinal pra todos menos quem envia
+        socket.broadcast.to(r).emit('offer', o, pcId);
     });
 
     // recebendo a resposta
-    socket.on('answer', (a, pcId) => {
-        // repassando a resposta para a outra ponta com nosso id de conexão
-        socket.broadcast.to(pcId).emit('answer', a, socket.id);
+    socket.on('answer', (a, r, pcId) => {
+        // repassando o sinal para todos conectados na sala to(sala)
+        // (broadcast) sinal pra todos menos quem envia
+        socket.broadcast.to(r).emit('answer', a, pcId);
     })
 
     // recebendo sinal de fim de compartilhamento de tela
-    socket.on('stop-screen-sharing', (r, streamId) => {
-        console.log('stop screen sharing', streamId);
-        socket.broadcast.to(r).emit('stop-screen-sharing', streamId, socket.id);
+    socket.on('stop-screen-sharing', (r, s) => {
+        console.log('stop screen sharing', s);
+        socket.broadcast.to(r).emit('stop-screen-sharing', s);
     })
 
     // recebendo sinal de sair da sala
@@ -103,6 +116,6 @@ io.on('connection', (socket) => {
         socket.leave(r);
         // repassando o sinal para todos conectados na sala to(sala)
         // (broadcast) sinal pra todos menos quem envia
-        socket.broadcast.to(r).emit('leave', socket.id);
+        socket.broadcast.to(r).emit('leave');
     });
 });
