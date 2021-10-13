@@ -7,7 +7,8 @@ document.addEventListener('DOMContentLoaded', () => {
         peerConnections: [],
         peerConnectionsIds: [],
         videoPeers: [],
-        stream: null,
+        streamVideo: null,
+        streamAudio: null,
         screenSharing: null,
         screenSharingSender: [],
         creator: true,
@@ -48,8 +49,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // cam
     btnCam.addEventListener('click', () => {
+        if (state.streamVideo===null) return showNotification('Câmera não está ativa!');
+        
         state.mycam = !state.mycam;
-        state.stream.getTracks()[1].enabled = !state.stream.getTracks()[1].enabled;
+        state.streamVideo.getTracks()[1].enabled = !state.streamVideo.getTracks()[1].enabled;
         if (state.mycam) {
             btnCam.classList.remove('btn-cam-active');
         }else{
@@ -59,15 +62,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // mic
     btnMic.addEventListener('click', () => {
+        if (state.streamAudio===null) return showNotification('Microfone não está ativo!');
+
         state.mymic = !state.mymic;
-        state.stream.getTracks()[0].enabled = !state.stream.getTracks()[0].enabled;
+        state.streamAudio.getTracks()[0].enabled = !state.streamAudio.getTracks()[0].enabled;
         (state.mymic) ? btnMic.classList.remove('btn-mic-active') : btnMic.classList.add('btn-mic-active');
     });
 
+    
     let slug = '';
 
     // check the room session
     let r = sessionStorage.getItem('room');
+    let alias = sessionStorage.getItem('alias');
+    console.log(alias);
+    if (alias===null) alias = window.prompt('Isira um alias.');
+    if (alias === '') {
+        alert('Você precisa informar um alias!');
+        return window.location.replace('/');
+    }
+
+    sessionStorage.setItem('alias', alias);
     
     if (typeof(r) !== 'string') {
         // check the room parameter
@@ -88,11 +103,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // reforce hash
     window.location.hash = '#' + slug;
 
-    socket.emit('join', slug);
+    socket.emit('join', slug, alias);
+
+
 
 
     // add new video element
-    addNewVideoElement = (stream, pcId) => {
+    addNewVideoElement = (stream, pcId, alias='Alias') => {
 
         // pegando os elementos de video em outhers
         const videos = document.querySelectorAll('.outhers video');
@@ -104,6 +121,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const el = document.createElement('div');
             el.classList.add('outher');
             el.classList.add('multicam');
+
+            const img = document.createElement('img');
+            img.src = "./assets/images/btn_cam_mute.png";
+            el.appendChild(img);
+
+            const h1 = document.createElement('h1');
+            h1.innerText = alias;
+            el.appendChild(h1);
+
             const v = document.createElement('video');
             v.id = stream.id;
             v.srcObject = stream;
@@ -124,34 +150,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // get user media function
     getMyUserMedia = async () => {
-        // media user
-        await navigator.mediaDevices.getUserMedia({
-            audio: true,
-            video: true
-        }).then((stream) => {
-            // adicionando a minha stream dentro da state
-            state.stream = stream;
+        try {
+            // const mediaStream = new MediaStream();
+            state.streamAudio = await navigator.mediaDevices.getUserMedia({audio:true});
+            state.streamVideo = await navigator.mediaDevices.getUserMedia({video:true});
 
-            mycam.srcObject = stream;
-            mycam.onloadedmetadata = (e) => {
-                mycam.play();
+            if (state.streamVideo) {
+                mycam.srcObject = state.streamVideo;
+                mycam.onloadedmetadata = (e) => {
+                    mycam.play();
+                }
             }
-
-            // setMyPeerConnection();
-
-            // // quando a segunda pessoa entra
-            socket.emit('ready', slug, state.id);
-
-        }).catch((err) => {
-            // alert('Não foi possível acessar a Câmera!');
-            // stopMyStream();
-
-            console.error(err);
-        });
+        }catch(e) {
+            if (state.streamAudio === null && state.streamVideo===null) {
+                alert('Você precisa permitir no mínimo o Audio para participar de uma chamada!');
+                window.location.replace('/');
+            }
+        }
     };
 
     // set peerconnection
-    setPeerConnection = (pcId) => {
+    setPeerConnection = (pcId, alias) => {
         console.log('Set my peer connection');
 
         const conn = new RTCPeerConnection(iceServers);
@@ -165,11 +184,12 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // escutando recebimento de mídia da outra ponta
         conn.ontrack = (event) => {
-            addNewVideoElement(event.streams[0], pcId);
+            addNewVideoElement(event.streams[0], pcId, alias);
         };
 
-        conn.addTrack(state.stream.getTracks()[0], state.stream);
-        conn.addTrack(state.stream.getTracks()[1], state.stream);
+        const mediaStream = new MediaStream();
+        if (state.streamAudio!==null) conn.addTrack(state.streamAudio.getTracks()[0], mediaStream);
+        if (state.streamVideo!==null) conn.addTrack(state.streamVideo.getTracks()[0], mediaStream);
 
         state.peerConnectionsIds.push(pcId);
         state.peerConnections[pcId] = conn;
@@ -183,32 +203,37 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     
     // events socket from server response
-    socket.on('created', (idSocket) => {
+    socket.on('created', async (idSocket) => {
         state.creator = true;
         state.id = idSocket;
 
-        getMyUserMedia();
+        await getMyUserMedia();
         // effect audio
         playAudio('join');
+        // quando a segunda pessoa entra
+        socket.emit('ready', slug, state.id);
     });
-    socket.on('joined', (idSocket) => {
+    socket.on('joined', async (idSocket) => {
         state.creator = false;
         state.id = idSocket;
         
-        getMyUserMedia();
+        await getMyUserMedia();
         playAudio('join');
+        // quando a segunda pessoa entra
+        socket.emit('ready', slug, state.id);
     });
     socket.on('full', () => {
         alert("Opa! A sala atingiu o total suportado!");
         return window.location.replace('/');
     });
-    socket.on('ready', (pcId) => {
+    socket.on('ready', (pcId, alias) => {
+
         playAudio('outher_join');
         
         // alert('Um parceiro chegou!');
         showNotification('Um parceiro chegou!');
 
-        setPeerConnection(pcId);
+        setPeerConnection(pcId, alias);
 
         // if (state.creator) {
             // criando oferta
@@ -227,11 +252,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const iceCandidate = new RTCIceCandidate(cadidate);
         state.peerConnections[pcId].addIceCandidate(iceCandidate);
     });
-    socket.on('offer', (offer, pcId) => {
+    socket.on('offer', (offer, pcId, alias) => {
+        console.log('recebendo oferta');
         // if (!state.creator) {
 
         if (state.peerConnections[pcId]===undefined) {
-            setPeerConnection(pcId);
+            setPeerConnection(pcId, alias);
         }
         
         state.peerConnections[pcId].setRemoteDescription(offer);
@@ -254,18 +280,13 @@ document.addEventListener('DOMContentLoaded', () => {
         socket.emit('answer', answer, pcId);
     });
     socket.on('answer', (answer, pcId) => {
+        console.log('recebendo a resposta');
         state.peerConnections[pcId].setRemoteDescription(answer);
     });
 
-    // recebendo eventos de adição de stream depois de uma oferta
-    // OnTrackFunction = (event) => {
-    //     addNewVideoElement(event.streams[0]);
-    // };
-
     stopMyStream = () => {
         if (mycam.srcObject) {
-            mycam.srcObject.getTracks()[0].stop();
-            mycam.srcObject.getTracks()[1].stop();
+            mycam.srcObject.getTracks().forEach((t) => t.stop());
         }
 
         sessionStorage.removeItem('room');
@@ -288,12 +309,14 @@ document.addEventListener('DOMContentLoaded', () => {
         // };
 
         // removendo todos os elementos de vídeo do par
-        state.videoPeers[pcId].forEach((v) => {
-                v.remove();
-                // removendo a lista de videos do par
-                state.videoPeers.splice(pcId, 1);
-            }
-        );
+        if (state.videoPeers[pcId]) {
+            state.videoPeers[pcId].forEach((v) => {
+                    v.remove();
+                    // removendo a lista de videos do par
+                    state.videoPeers.splice(pcId, 1);
+                }
+            );
+        }
 
         // removendo conexão de par
         if (state.peerConnections[pcId]) {
@@ -316,8 +339,10 @@ document.addEventListener('DOMContentLoaded', () => {
             video: true
         });
         // caso a tela já esteja sendo compartilhada substitui
-        if (state.screenSharingSender.length>0) {
-            return state.screenSharingSender.replaceTrack(screenSharing.getVideoTracks()[0]);
+        if (Object.keys(state.screenSharingSender).length>0) {
+            return state.peerConnectionsIds.forEach(pcId => {
+                state.screenSharingSender[pcId].replaceTrack(screenSharing.getVideoTracks()[0]);
+            });
         }
         
         state.screenSharing = screenSharing;

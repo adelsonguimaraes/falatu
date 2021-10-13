@@ -21,14 +21,18 @@ server.listen(PORT, () => {
     console.log('listening on ' + PORT);
 });
 
+const aliases = [];
+
 // events for socket
 io.on('connection', (socket) => {
     console.log('User connected: ' + socket.id);
 
     // join in room
-    socket.on('join', (r) => {
+    socket.on('join', (r, alias) => {
         const rooms = io.sockets.adapter.rooms;
         const room = rooms.get(r);
+
+        aliases[socket.id] = alias;
 
         // if room undefined, create room
         if (room === undefined) {
@@ -63,7 +67,7 @@ io.on('connection', (socket) => {
     socket.on('ready', (r, pcId) => {
         // enviando para toda a sala nosso id de conexão
         // assim os outros parares podem nos ofertar uma conexão
-        socket.broadcast.to(r).emit('ready', socket.id);
+        socket.broadcast.to(r).emit('ready', socket.id, aliases[socket.id]);
     });
 
     // recendendo o candidato
@@ -75,13 +79,13 @@ io.on('connection', (socket) => {
     // recebendo a oferta
     socket.on('offer', (o, pcId) => {
         // repassando a oferta para a outra ponta com nosso id de conexão
-        socket.broadcast.to(pcId).emit('offer', o, socket.id);
+        socket.broadcast.to(pcId).emit('offer', o, socket.id, aliases[socket.id]);
     });
 
     // recebendo a oferta
     socket.on('offer-screen-sharing', (o, pcId) => {
         // repassando a oferta para a outra ponta com nosso id de conexão
-        socket.broadcast.to(pcId).emit('offer-screen-sharing', o, socket.id);
+        socket.broadcast.to(pcId).emit('offer-screen-sharing', o, socket.id, aliases[socket.id]);
         console.log(pcId, socket.id);
     });
 
@@ -104,5 +108,13 @@ io.on('connection', (socket) => {
         // repassando o sinal para todos conectados na sala to(sala)
         // (broadcast) sinal pra todos menos quem envia
         socket.broadcast.to(r).emit('leave', socket.id);
+    });
+    
+    // pegando o evento de desconexão
+    socket.on("disconnect", () => {
+        // removendo o socket de todas as salas
+        socket.leave();
+        // enviando a saída do socket para todas as salas
+        socket.broadcast.emit('leave', socket.id);
     });
 });

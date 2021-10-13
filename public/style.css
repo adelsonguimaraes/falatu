@@ -193,7 +193,7 @@ button:hover {
     width: 90%;
     height: 60%;
     flex-wrap: wrap;
-    flex-direction: row;
+    flex-direction: column;
     background-color: #26203e;
     align-items: center;
     justify-content: center;
@@ -213,22 +213,23 @@ button:hover {
     align-self: stretch;
     cursor: pointer;
 }
-/* 
-.multicam2 {
-    flex: 170px 1;
-    background-color: aliceblue;
-    margin: 5px 5px;
-    align-self: stretch;
-} */
+.multicam h1 {
+    position: absolute;
+    bottom: -15px;
+    z-index: 1;
+    background: darkmagenta;
+    padding: 5px;
+    width: 100%;
+    text-align: center;
+    font-size: 16px;
+}
 
 @media (min-width: 520px)  {
     .outhers {
         flex-direction: row;
     }
-}
-
-/* @media (min-width: 1023px)  {
-    .multicam {
-        min-height: 90%;
+    .multicam h1 {
+        background: darkmagenta;
+        font-size: 20px;
     }
-} */
+}
