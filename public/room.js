@@ -231,7 +231,7 @@ document.addEventListener('DOMContentLoaded', () => {
         playAudio('outher_join');
         
         // alert('Um parceiro chegou!');
-        showNotification('Um parceiro chegou!');
+        showNotification(`${alias} entrou na chamada!`);
 
         setPeerConnection(pcId, alias);
 
@@ -402,7 +402,7 @@ document.addEventListener('DOMContentLoaded', () => {
         playAudio('outher_disconnect');
 
         // alert('O parceiro se desconectou, você é novo dono da sala!');
-        showNotification('O parceiro se desconectou, você é novo dono da sala!');
+        showNotification(`${alias} saiu da chamada!`);
         // state.creator = true;
         // stopMyStream(); // forçando a saída da sala
         stopOutherStream(pcId);

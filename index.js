@@ -105,16 +105,18 @@ io.on('connection', (socket) => {
     socket.on('leave', (r) => {
         // removendo o socket da sala
         socket.leave(r);
+        aliases.splice(aliases[socket.id]);
         // repassando o sinal para todos conectados na sala to(sala)
         // (broadcast) sinal pra todos menos quem envia
-        socket.broadcast.to(r).emit('leave', socket.id);
+        socket.broadcast.to(r).emit('leave', socket.id, aliases[socket.id]);
     });
     
     // pegando o evento de desconexão
     socket.on("disconnect", () => {
         // removendo o socket de todas as salas
         socket.leave();
+        aliases.splice(aliases[socket.id]);
         // enviando a saída do socket para todas as salas
-        socket.broadcast.emit('leave', socket.id);
+        socket.broadcast.emit('leave', socket.id, aliases[socket.id]);
     });
 });
