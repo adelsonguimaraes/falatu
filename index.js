@@ -98,7 +98,7 @@ io.on('connection', (socket) => {
     // recebendo sinal de fim de compartilhamento de tela
     socket.on('stop-screen-sharing', (r, streamId) => {
         console.log('stop screen sharing', streamId);
-        socket.broadcast.to(r).emit('stop-screen-sharing', streamId, socket.id);
+        socket.broadcast.to(r).emit('stop-screen-sharing', streamId, socket.id, aliases[socket.id]);
     })
 
     // recebendo sinal de sair da sala

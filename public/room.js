@@ -52,11 +52,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (state.streamVideo===null) return showNotification('Câmera não está ativa!');
         
         state.mycam = !state.mycam;
-        state.streamVideo.getTracks()[1].enabled = !state.streamVideo.getTracks()[1].enabled;
+        state.streamVideo.getTracks()[0].enabled = !state.streamVideo.getTracks()[0].enabled;
         if (state.mycam) {
-            btnCam.classList.remove('btn-cam-active');
-        }else{
             btnCam.classList.add('btn-cam-active');
+        }else{
+            btnCam.classList.remove('btn-cam-active');
         }
     });
 
@@ -66,7 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         state.mymic = !state.mymic;
         state.streamAudio.getTracks()[0].enabled = !state.streamAudio.getTracks()[0].enabled;
-        (state.mymic) ? btnMic.classList.remove('btn-mic-active') : btnMic.classList.add('btn-mic-active');
+        (state.mymic) ? btnMic.classList.add('btn-mic-active') : btnMic.classList.remove('btn-mic-active');
     });
 
     
@@ -273,14 +273,17 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         // }
     });
-    socket.on('offer-screen-sharing', async (offer, pcId) => {
+    socket.on('offer-screen-sharing', async (offer, pcId, alias) => {
+        showNotification(`${alias} iniciou um compartilhamento de tela.`);
+
+        playAudio('screen_sharing');
+        
         state.peerConnections[pcId].setRemoteDescription(offer);
         const answer = await state.peerConnections[pcId].createAnswer();
         state.peerConnections[pcId].setLocalDescription(answer);
         socket.emit('answer', answer, pcId);
     });
     socket.on('answer', (answer, pcId) => {
-        console.log('recebendo a resposta');
         state.peerConnections[pcId].setRemoteDescription(answer);
     });
 
@@ -294,20 +297,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     stopOutherStream = (pcId) => {
-        // // pegando os elementos de video em outhers
-        // const videos = document.querySelectorAll('.outhers video');
-        // // pegando o video do par
-        // const video = Array.from(videos).find(v => v.id.toString() === pcId.toString());
-        // if (video===undefined) return;
-
-        // // removendo elemento de video
-        // if (video.srcObject) {
-        //     video.srcObject.getTracks()[0].stop();
-        //     video.srcObject.getTracks()[1].stop();
-        //     video.srcObject = null;
-        //     video.parentElement.remove();
-        // };
-
         // removendo todos os elementos de vídeo do par
         if (state.videoPeers[pcId]) {
             state.videoPeers[pcId].forEach((v) => {
@@ -330,6 +319,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // showDisplay
     const btnScreen = document.querySelector('button.btn-screen');
+    
+    // se for mobile remove botão de compartilhar tela
+    if (navigator.userAgentData.mobile) btnScreen.remove();
+
     btnScreen.addEventListener('click', async () => {
         if (state.peerConnectionsIds.length===0) {
             return showNotification('Nenhuma conexão para compartilhar a tela!');
@@ -377,11 +370,15 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // recebendo o evento de parada de compartilhamento de tela
-    socket.on('stop-screen-sharing', (streamId, pcId) => {
+    socket.on('stop-screen-sharing', (streamId, pcId, alias) => {
+        showNotification(`${alias} finalizou o compartilhamento de tela.`);
+
+        playAudio('screen_sharing_stop');
+
         // buscando dentro dos videos do par
         state.videoPeers[pcId].forEach((v, index) => {
             // verificando se o id do video é igual ao da stream
-            if (v.firstElementChild.id.toString() === streamId.toString()) {
+            if (v.querySelector('video').id.toString() === streamId.toString()) {
                 // removendo o elemento do dom
                 v.remove();
                 // removendo o video da lista de videos do par
