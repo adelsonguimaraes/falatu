@@ -17,4 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const slug = sala.trim().replace(' ', '_');
         window.location.replace(`/room#${slug}`);
     });
+
+    // chamando a splash
+    splash.show();
 });

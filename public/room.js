@@ -1,5 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
 
+    // chamando a splash
+    splash.show();
+
     // state
     const state = {
         // peerConnection: null,
@@ -9,12 +12,13 @@ document.addEventListener('DOMContentLoaded', () => {
         videoPeers: [],
         streamVideo: null,
         streamAudio: null,
+        videoInFocus: null,
         screenSharing: null,
         screenSharingSender: [],
         creator: true,
         mycam: true,
         mymic: true,
-        myscreen: false
+        myscreen: false,
     };
 
     // room
@@ -133,7 +137,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.querySelector('.outhers').style = (len<=2) ? 'flex-direction:column;' : 'flex-direction:row;';
         // desktop
         }else{
-                if (len<=2) {
+            if (len<=2 || state.videoInFocus) {
                 document.querySelector('.outhers').style = 'align-content: stretch;';
                 Array.from(document.querySelectorAll('.multicam')).forEach(e => e.style = 'height: auto; flex:300px;');
             }else{
@@ -188,11 +192,40 @@ document.addEventListener('DOMContentLoaded', () => {
                 v.play();
             }
             v.onclick = (e) => {
-                v.requestFullscreen();
+                // v.requestFullscreen();
+                if (!state.videoInFocus) {
+                    const len = document.querySelectorAll('.outhers video').length;
+                    if (len===1) return false;
+
+                    const infocus = document.createElement('div');
+                    infocus.classList.add('infocus');
+                    infocus.appendChild(v.parentElement);
+                    document.querySelector('.video-box').prepend(infocus);
+                    state.videoInFocus = infocus;
+
+                    showNotification(`${h1.innerText} colocado em foco.`);
+
+                }else if (state.videoInFocus.firstChild === v.parentElement){
+                    const outhers = document.querySelector('.outhers');
+                    outhers.appendChild(v.parentElement);
+                    state.videoInFocus.remove();
+                    state.videoInFocus = null;
+
+                }else{
+                    const outhers = document.querySelector('.outhers');
+                    outhers.appendChild(state.videoInFocus.firstChild);
+                    state.videoInFocus.appendChild(v.parentElement);
+
+                    showNotification(`${h1.innerText} colocado em foco.`);
+                }
+
+                // calculando no evento de click do infocus
+                calcVideosStyle();
             }
 
             state.videoPeers[pcId].push(el);
 
+            // calculando quando adiciona um video novo
             calcVideosStyle();
         }
     }
@@ -205,10 +238,8 @@ document.addEventListener('DOMContentLoaded', () => {
             state.streamVideo = await navigator.mediaDevices.getUserMedia({video:true});
 
             if (state.streamVideo) {
-                mycam.srcObject = state.streamVideo;
-                mycam.onloadedmetadata = (e) => {
-                    mycam.play();
-                }
+                // adicionado a grade de videos
+                addNewVideoElement(state.streamVideo, 0, alias);
             }
         }catch(e) {
             if (state.streamAudio === null && state.streamVideo===null) {
@@ -241,7 +272,6 @@ document.addEventListener('DOMContentLoaded', () => {
         // verificando se possui compartilhamento de tela ativo
         if (state.screenSharing) {
             state.screenSharing.getTracks().forEach(track => {
-                track.descricao = 'teste de descricao';
                 conn.addTrack(track, state.screenSharing)
             });
         }
@@ -334,23 +364,19 @@ document.addEventListener('DOMContentLoaded', () => {
         state.peerConnections[pcId].setRemoteDescription(answer);
     });
 
-    stopMyStream = () => {
-        if (mycam.srcObject) {
-            mycam.srcObject.getTracks().forEach((t) => t.stop());
-        }
-
-        sessionStorage.removeItem('room');
-        window.location.replace('/');
-    };
-
     stopOutherStream = (pcId) => {
         // removendo todos os elementos de vídeo do par
         if (state.videoPeers[pcId]) {
             state.videoPeers[pcId].forEach((v) => {
+                    if (state.videoInFocus && state.videoInFocus.firstChild === v) {
+                        state.videoInFocus.remove();
+                        state.videoInFocus = null;
+                    }
                     v.remove();
                 }
             );
         }
+
         // removendo a lista de videos do par
         delete state.videoPeers[pcId];
         
@@ -394,6 +420,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 state.myscreen = !state.myscreen;
                 (state.myscreen) ? btnScreen.classList.add('btn-screen-active') : btnScreen.classList.remove('btn-screen-active');
+
+                showNotification(`Compartilhamento de tela finalizado`);
+                playAudio('screen_sharing_stop');
 
                 return true;
             }
@@ -442,6 +471,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.error(err);
                 });
             });
+
+            showNotification(`Compartilhamento de tela iniciado`);
+            playAudio('screen_sharing');
+
         } catch (e) {
            console.error('O usuário não deu permissão de compartilhar a tela ou cancelou.', e); 
         }
@@ -457,28 +490,31 @@ document.addEventListener('DOMContentLoaded', () => {
         state.videoPeers[pcId].forEach((v, index) => {
             // verificando se o id do video é igual ao da stream
             if (v.querySelector('video').id.toString() === streamId.toString()) {
+                // removendo se estiver infocus
+                if (state.videoInFocus && state.videoInFocus.firstChild === v) {
+                    state.videoInFocus.remove();
+                    state.videoInFocus = null;
+                }
                 // removendo o elemento do dom
                 v.remove();
                 // removendo o video da lista de videos do par
                 state.videoPeers[pcId].splice(index, 1);
             }
         });
+
+        calcVideosStyle();
     })
 
     // exit
     btnExit.addEventListener('click', () => {
         socket.emit('leave', slug);
-        stopMyStream();
-        // stopOutherStream();
+        window.location.replace('/');
     });
 
     socket.on('leave', (pcId, alias) => {
         playAudio('outher_disconnect');
 
-        // alert('O parceiro se desconectou, você é novo dono da sala!');
         showNotification(`${alias} saiu da chamada!`);
-        // state.creator = true;
-        // stopMyStream(); // forçando a saída da sala
         stopOutherStream(pcId);
     });
 });
