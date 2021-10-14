@@ -7,7 +7,7 @@ body {
     position: relative;
     width: 100%;
     height: 100vh;
-    background-color: #30294E;
+    background: linear-gradient(180deg, rgba(48, 41, 78, 0.9) 6.77%, #322A53 100%);
     font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
 }
 .box {
@@ -73,11 +73,12 @@ button:hover {
 
 /* ROOM */
 .header {
-    width: 90%;
+    width: inherit;
     display: flex;
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
+    padding: 0 10px;
 }
 .my-cam {
     width: 144px;
@@ -103,10 +104,8 @@ button:hover {
 }
 
 .outher {
-    /* height: 400px; */
     background-color: black;
     border-radius: 10px;
-    /* width: 90%; */
     color: #fff;
     padding: 5px;
     display: flex;
@@ -122,7 +121,7 @@ button:hover {
 }
 
 .buttons-cam {
-    width: 90%;
+    width: inherit;
     display: inline-flex;
     align-items: center;
     justify-content: space-between;
@@ -157,10 +156,13 @@ button:hover {
     background-image: url(./assets/images/btn_mic.png) !important;
 }
 .buttons-cam .btn-screen {
-    background-image: url(./assets/images/btn_screen.png);
+    background-image: url(./assets/images/btn_screen_mute.png);
     background-repeat: no-repeat;
     background-position: center;
     background-size: 55px;
+}
+.btn-screen-active {
+    background-image: url(./assets/images/btn_screen.png) !important;
 }
 
 .buttons-cam .btn-exit {
@@ -190,46 +192,70 @@ button:hover {
 }
 .outhers {
     display: flex;
-    width: 90%;
+    flex: auto;
+    width: inherit;
     height: 60%;
     flex-wrap: wrap;
-    flex-direction: column;
-    background-color: #26203e;
-    align-items: center;
+    background-color: #26203e70;
     justify-content: center;
     position: relative;
 }
-/* .multicam {
-    width: 160px;
-    height: 180px;
-    background-color: aliceblue;
-    margin: 5px 5px;
-} */
 
 .multicam {
-    flex: 200px 1;
+    flex: 10rem;
     /* background-color: aliceblue; */
-    margin: 5px 5px;
-    align-self: stretch;
+    margin: 2px 2px;
+    /* align-self: stretch; */
     cursor: pointer;
 }
 .multicam h1 {
     position: absolute;
+    left: 0;
     bottom: -15px;
     z-index: 1;
     background: darkmagenta;
     padding: 5px;
-    width: 100%;
+    /* width: 100%; */
+    margin: 25px 10px;
     text-align: center;
     font-size: 16px;
+    border-radius: 5px;
 }
 
-@media (min-width: 520px)  {
+.multicam .mic-muted-overlay {
+    position: absolute;
+    right: 0;
+    top: 0;
+    margin: 30px;
+    width: 55px;
+    z-index: 1;
+}
+
+@media (min-width: 545px)  {
+    .multicam {
+        flex: 16rem;
+    }
+}
+
+@media (min-width: 720px)  {
     .outhers {
         flex-direction: row;
+        align-content: stretch;
+        justify-content: center;
+    }
+    .multicam {
+        flex: 1 20rem;
+        margin: 2px 10px;
+        cursor: pointer;
     }
     .multicam h1 {
         background: darkmagenta;
         font-size: 20px;
     }
 }
+
+/* @media (min-width: 1080px)  {
+    .multicam {
+        flex: 15rem;
+    }
+} */

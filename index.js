@@ -103,20 +103,29 @@ io.on('connection', (socket) => {
 
     // recebendo sinal de sair da sala
     socket.on('leave', (r) => {
+        // emit o leave pra sala
+        socket.broadcast.to(r).emit('leave', socket.id, aliases[socket.id]);
+        // remove do alias da lista
+        delete aliases[socket.id];
         // removendo o socket da sala
         socket.leave(r);
-        aliases.splice(aliases[socket.id]);
-        // repassando o sinal para todos conectados na sala to(sala)
-        // (broadcast) sinal pra todos menos quem envia
-        socket.broadcast.to(r).emit('leave', socket.id, aliases[socket.id]);
+    });
+
+    socket.on('mic-toggle', (r, statusMic) => {
+        socket.broadcast.to(r).emit('mic-toggle', socket.id, statusMic);
     });
     
     // pegando o evento de desconexão
     socket.on("disconnect", () => {
         // removendo o socket de todas as salas
         socket.leave();
-        aliases.splice(aliases[socket.id]);
-        // enviando a saída do socket para todas as salas
-        socket.broadcast.emit('leave', socket.id, aliases[socket.id]);
+
+        // se o alias já tiver sido cadastrado
+        if (aliases[socket.id]!==undefined) {
+            // enviando a saída do socket para todas as salas
+            socket.broadcast.emit('leave', socket.id, aliases[socket.id]);
+            // remove do alias da lista
+            delete aliases[socket.id];
+        }
     });
 });

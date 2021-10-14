@@ -13,7 +13,8 @@ document.addEventListener('DOMContentLoaded', () => {
         screenSharingSender: [],
         creator: true,
         mycam: true,
-        mymic: true
+        mymic: true,
+        myscreen: false
     };
 
     // room
@@ -66,7 +67,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
         state.mymic = !state.mymic;
         state.streamAudio.getTracks()[0].enabled = !state.streamAudio.getTracks()[0].enabled;
-        (state.mymic) ? btnMic.classList.add('btn-mic-active') : btnMic.classList.remove('btn-mic-active');
+        if (state.mymic) {
+            btnMic.classList.add('btn-mic-active');
+        }else{
+            btnMic.classList.remove('btn-mic-active');
+        }
+
+        socket.emit('mic-toggle', r, state.mymic);
+    });
+
+    socket.on('mic-toggle', (pcId, statusMic) => {
+        if (!statusMic) {
+            const img = document.createElement('img');
+            img.src = "./assets/images/mic_mute_overlay.png";
+            img.classList.add('mic-muted-overlay');
+            state.videoPeers[pcId][0].appendChild(img);
+        }else{
+            state.videoPeers[pcId][0].querySelector('.mic-muted-overlay').remove();
+        }
     });
 
     
@@ -75,7 +93,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // check the room session
     let r = sessionStorage.getItem('room');
     let alias = sessionStorage.getItem('alias');
-    console.log(alias);
+    
     if (alias===null) alias = window.prompt('Isira um alias.');
     if (alias === '') {
         alert('Você precisa informar um alias!');
@@ -108,6 +126,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
+    calcVideosStyle = () => {
+        const len = document.querySelectorAll('.outhers video').length;
+        // mobile
+        if (window.innerWidth <= 720) {
+            document.querySelector('.outhers').style = (len<=2) ? 'flex-direction:column;' : 'flex-direction:row;';
+        // desktop
+        }else{
+                if (len<=2) {
+                document.querySelector('.outhers').style = 'align-content: stretch;';
+                Array.from(document.querySelectorAll('.multicam')).forEach(e => e.style = 'height: auto; flex:300px;');
+            }else{
+                document.querySelector('.outhers').style = 'align-content: center;';
+                Array.from(document.querySelectorAll('.multicam')).forEach(e => e.style = 'height: 200px; flex: 0 300px;');
+            }
+        }
+    }
+
     // add new video element
     addNewVideoElement = (stream, pcId, alias='Alias') => {
 
@@ -118,6 +153,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const video = Array.from(videos).find(v => v.id.toString() === stream.id.toString());
         // caso o id da stream seja diferente dos id
         if (video === undefined) {
+            
+            if (state.videoPeers[pcId]===undefined) state.videoPeers[pcId] = [];
+
+            let color = 'darkmagenta';
+            let label = '';
+            
+            if (state.videoPeers[pcId].length>0) {
+                label = 'Tela de';
+                color = '#8b0000';
+            }
+
             const el = document.createElement('div');
             el.classList.add('outher');
             el.classList.add('multicam');
@@ -127,12 +173,14 @@ document.addEventListener('DOMContentLoaded', () => {
             el.appendChild(img);
 
             const h1 = document.createElement('h1');
-            h1.innerText = alias;
+            h1.innerText = label+' '+alias;
+            h1.style.backgroundColor = color;
             el.appendChild(h1);
 
             const v = document.createElement('video');
             v.id = stream.id;
             v.srcObject = stream;
+            v.controls = false;
             el.appendChild(v);
             outhers.appendChild(el);
 
@@ -143,8 +191,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 v.requestFullscreen();
             }
 
-            if (state.videoPeers[pcId]===undefined) state.videoPeers[pcId] = [];
             state.videoPeers[pcId].push(el);
+
+            calcVideosStyle();
         }
     }
 
@@ -171,8 +220,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // set peerconnection
     setPeerConnection = (pcId, alias) => {
-        console.log('Set my peer connection');
-
         const conn = new RTCPeerConnection(iceServers);
         
         conn.onicecandidate = (event) => {
@@ -184,12 +231,20 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // escutando recebimento de mídia da outra ponta
         conn.ontrack = (event) => {
-            addNewVideoElement(event.streams[0], pcId, alias);
+            event.streams.forEach(stream => addNewVideoElement(stream, pcId, alias));
         };
 
         const mediaStream = new MediaStream();
         if (state.streamAudio!==null) conn.addTrack(state.streamAudio.getTracks()[0], mediaStream);
         if (state.streamVideo!==null) conn.addTrack(state.streamVideo.getTracks()[0], mediaStream);
+
+        // verificando se possui compartilhamento de tela ativo
+        if (state.screenSharing) {
+            state.screenSharing.getTracks().forEach(track => {
+                track.descricao = 'teste de descricao';
+                conn.addTrack(track, state.screenSharing)
+            });
+        }
 
         state.peerConnectionsIds.push(pcId);
         state.peerConnections[pcId] = conn;
@@ -211,7 +266,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // effect audio
         playAudio('join');
         // quando a segunda pessoa entra
-        socket.emit('ready', slug, state.id);
+        // socket.emit('ready', slug, state.id);
     });
     socket.on('joined', async (idSocket) => {
         state.creator = false;
@@ -227,7 +282,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return window.location.replace('/');
     });
     socket.on('ready', (pcId, alias) => {
-
         playAudio('outher_join');
         
         // alert('Um parceiro chegou!');
@@ -235,27 +289,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
         setPeerConnection(pcId, alias);
 
-        // if (state.creator) {
-            // criando oferta
-            state.peerConnections[pcId].createOffer()
-            .then((offer) => {
-                state.peerConnections[pcId].setLocalDescription(offer);
-                socket.emit('offer', offer, pcId);
-            })
-            .catch((err) => {
-                console.error(err);
-            });
-        // }
+        // criando oferta
+        state.peerConnections[pcId].createOffer()
+        .then((offer) => {
+            state.peerConnections[pcId].setLocalDescription(offer);
+            socket.emit('offer', offer, pcId);
+        })
+        .catch((err) => {
+            console.error(err);
+        });
     });
     socket.on('candidate', async (cadidate, pcId) => {
-        console.log('RECEBENDO CANDIDATO');
         const iceCandidate = new RTCIceCandidate(cadidate);
         state.peerConnections[pcId].addIceCandidate(iceCandidate);
     });
     socket.on('offer', (offer, pcId, alias) => {
-        console.log('recebendo oferta');
-        // if (!state.creator) {
-
         if (state.peerConnections[pcId]===undefined) {
             setPeerConnection(pcId, alias);
         }
@@ -271,7 +319,6 @@ document.addEventListener('DOMContentLoaded', () => {
         .catch((err) => {
             console.error(err);
         });
-        // }
     });
     socket.on('offer-screen-sharing', async (offer, pcId, alias) => {
         showNotification(`${alias} iniciou um compartilhamento de tela.`);
@@ -301,72 +348,103 @@ document.addEventListener('DOMContentLoaded', () => {
         if (state.videoPeers[pcId]) {
             state.videoPeers[pcId].forEach((v) => {
                     v.remove();
-                    // removendo a lista de videos do par
-                    state.videoPeers.splice(pcId, 1);
                 }
             );
         }
-
+        // removendo a lista de videos do par
+        delete state.videoPeers[pcId];
+        
         // removendo conexão de par
         if (state.peerConnections[pcId]) {
             state.peerConnections[pcId].ontrack = null;
             state.peerConnections[pcId].onicecandidate = null;
             state.peerConnections[pcId].close();
             state.peerConnections[pcId] = null;
-            state.peerConnections.splice(state.peerConnections[pcId], 1);
+            // removendo o peer que desconectou
+            delete state.peerConnections[pcId];
         };
+
+        // removendo id do par da lista (array comum)
+        state.peerConnectionsIds = state.peerConnectionsIds.filter(id => id != pcId);
+
+        calcVideosStyle();
     };
 
-    // showDisplay
+    // showDisplay 
     const btnScreen = document.querySelector('button.btn-screen');
     
     // se for mobile remove botão de compartilhar tela
     if (navigator.userAgentData.mobile) btnScreen.remove();
 
     btnScreen.addEventListener('click', async () => {
-        if (state.peerConnectionsIds.length===0) {
-            return showNotification('Nenhuma conexão para compartilhar a tela!');
-        }
 
-        const screenSharing = await navigator.mediaDevices.getDisplayMedia({
-            video: true
-        });
-        // caso a tela já esteja sendo compartilhada substitui
-        if (Object.keys(state.screenSharingSender).length>0) {
-            return state.peerConnectionsIds.forEach(pcId => {
-                state.screenSharingSender[pcId].replaceTrack(screenSharing.getVideoTracks()[0]);
+        try {
+            // verificando se há conexões peers
+            if (state.peerConnectionsIds.length===0) {
+                return showNotification('Nenhuma conexão para compartilhar a tela!');
+            }
+
+            // caso a tela já esteja sendo compartilhada derrubamos
+            if (state.screenSharing!=null) {
+                // se tiver uma tela conectada para tudo
+                state.screenSharing.getTracks().forEach(track => track.stop());
+                socket.emit('stop-screen-sharing', r, state.screenSharing.id);
+                state.screenSharing = null;
+                state.screenSharingSender = [];
+
+                state.myscreen = !state.myscreen;
+                (state.myscreen) ? btnScreen.classList.add('btn-screen-active') : btnScreen.classList.remove('btn-screen-active');
+
+                return true;
+            }
+
+            const screenSharing = await navigator.mediaDevices.getDisplayMedia({
+                video: true
             });
-        }
-        
-        state.screenSharing = screenSharing;
-        
-        // evento quando o compartilhamento for finalizado
-        screenSharing.getVideoTracks()[0].onended = (e) => {
-            state.screenSharing.getTracks().forEach(track => track.stop());
-            socket.emit('stop-screen-sharing', r, state.screenSharing.id);
-            state.screenSharing = null;
-            state.screenSharingSender = [];
-        }
 
-        // listando peers connections
-        state.peerConnectionsIds.forEach(pcId => {
-            for (const track of screenSharing.getTracks()) {
-                const ss = state.peerConnections[pcId].addTrack(track, screenSharing);
-                state.screenSharingSender[pcId] = ss;
-            };
-        });
+            state.myscreen = !state.myscreen;
+            (state.myscreen) ? btnScreen.classList.add('btn-screen-active') : btnScreen.classList.remove('btn-screen-active');
 
-        // criando a oferta pra cada par
-        state.peerConnectionsIds.forEach(pcId => {
-            state.peerConnections[pcId].createOffer()
-            .then((offer) => {
-                state.peerConnections[pcId].setLocalDescription(offer);
-                socket.emit('offer-screen-sharing', offer, pcId);
-            })
-            .catch((err) => {
-                console.error(err);
+                // caso a tela já esteja sendo compartilhada substitui
+            // if (Object.keys(state.screenSharingSender).length>0) {
+                // suspendendo por enquanto a atualização de uma tela já compartilhada
+                // return state.peerConnectionsIds.forEach(pcId => {
+                //     state.screenSharingSender[pcId].replaceTrack(screenSharing.getVideoTracks()[0]);
+                // });
+            // }
+            
+            state.screenSharing = screenSharing;
+            
+            // evento quando o compartilhamento for finalizado
+            screenSharing.getVideoTracks()[0].onended = (e) => {
+                state.screenSharing.getTracks().forEach(track => track.stop());
+                socket.emit('stop-screen-sharing', r, state.screenSharing.id);
+                state.screenSharing = null;
+                state.screenSharingSender = [];
+            }
+
+            // listando peers connections
+            state.peerConnectionsIds.forEach(pcId => {
+                for (const track of screenSharing.getTracks()) {
+                    const ss = state.peerConnections[pcId].addTrack(track, screenSharing);
+                    state.screenSharingSender[pcId] = ss;
+                };
             });
-        });
+
+            // criando a oferta pra cada par
+            state.peerConnectionsIds.forEach(pcId => {
+                state.peerConnections[pcId].createOffer()
+                .then((offer) => {
+                    state.peerConnections[pcId].setLocalDescription(offer);
+                    socket.emit('offer-screen-sharing', offer, pcId);
+                })
+                .catch((err) => {
+                    console.error(err);
+                });
+            });
+        } catch (e) {
+           console.error('O usuário não deu permissão de compartilhar a tela ou cancelou.', e); 
+        }
     });
 
     // recebendo o evento de parada de compartilhamento de tela
@@ -394,8 +472,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // stopOutherStream();
     });
 
-    socket.on('leave', (pcId) => {
-
+    socket.on('leave', (pcId, alias) => {
         playAudio('outher_disconnect');
 
         // alert('O parceiro se desconectou, você é novo dono da sala!');
