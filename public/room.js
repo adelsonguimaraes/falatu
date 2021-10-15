@@ -169,7 +169,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         // se for mobile remove botão de compartilhar tela
-        if (navigator.userAgentData.mobile) btnScreen.remove();
+        if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+            btnScreen.remove();
+        }
 
         btnScreen.addEventListener('click', async () => {
 
