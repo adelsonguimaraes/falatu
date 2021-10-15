@@ -111,8 +111,8 @@ io.on('connection', (socket) => {
         socket.leave(r);
     });
 
-    socket.on('mic-toggle', (r, statusMic) => {
-        socket.broadcast.to(r).emit('mic-toggle', socket.id, statusMic);
+    socket.on('mic-cam-toggle', (r, statusMic, statusCam) => {
+        socket.broadcast.to(r).emit('mic-cam-toggle', socket.id, statusMic, statusCam);
     });
     
     // pegando o evento de desconexão

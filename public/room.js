@@ -63,6 +63,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }else{
             btnCam.classList.remove('btn-cam-active');
         }
+
+        socket.emit('mic-cam-toggle', r, state.mymic, state.mycam);
     });
 
     // mic
@@ -77,17 +79,34 @@ document.addEventListener('DOMContentLoaded', () => {
             btnMic.classList.remove('btn-mic-active');
         }
 
-        socket.emit('mic-toggle', r, state.mymic);
+        socket.emit('mic-cam-toggle', r, state.mymic, state.mycam);
     });
 
-    socket.on('mic-toggle', (pcId, statusMic) => {
+    socket.on('mic-cam-toggle', (pcId, statusMic, statusCam) => {
         if (!statusMic) {
-            const img = document.createElement('img');
-            img.src = "./assets/images/mic_mute_overlay.png";
-            img.classList.add('mic-muted-overlay');
-            state.videoPeers[pcId][0].appendChild(img);
+            const imgMic = state.videoPeers[pcId][0].querySelector('.mic-muted-overlay');
+            if (!imgMic) {
+                const img = document.createElement('img');
+                img.src = "./assets/images/btn_mic_mute.png";
+                img.classList.add('mic-muted-overlay');
+                state.videoPeers[pcId][0].appendChild(img);
+            }
         }else{
-            state.videoPeers[pcId][0].querySelector('.mic-muted-overlay').remove();
+            const el = state.videoPeers[pcId][0].querySelector('.mic-muted-overlay');
+            if (el) el.remove();
+        }
+
+        if (!statusCam) {
+            const imgCam = state.videoPeers[pcId][0].querySelector('.cam-muted-overlay');
+            if (!imgCam) {
+                const img = document.createElement('img');
+                img.src = "./assets/images/btn_cam_mute.png";
+                img.classList.add('cam-muted-overlay');
+                state.videoPeers[pcId][0].appendChild(img);
+            }
+        }else{
+            const el = state.videoPeers[pcId][0].querySelector('.cam-muted-overlay');
+            if (el) el.remove();
         }
     });
 
@@ -171,10 +190,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const el = document.createElement('div');
             el.classList.add('outher');
             el.classList.add('multicam');
-
-            const img = document.createElement('img');
-            img.src = "./assets/images/btn_cam_mute.png";
-            el.appendChild(img);
 
             const h1 = document.createElement('h1');
             h1.innerText = label+' '+alias;
@@ -362,6 +377,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     socket.on('answer', (answer, pcId) => {
         state.peerConnections[pcId].setRemoteDescription(answer);
+        // enviando status de mute do mic
+        socket.emit('mic-cam-toggle', r, state.mymic, state.mycam)
     });
 
     stopOutherStream = (pcId) => {
