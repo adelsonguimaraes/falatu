@@ -53,6 +53,7 @@ input {
     border: 0;
     border-radius: 5px;
     font-size: 20px;
+    box-shadow: 0px 0px 5px 0px #000;
 }
 button {
     margin: 10px 0;
@@ -271,6 +272,121 @@ button:hover {
     position: relative;
 }
 
+.preparo {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex:auto;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+    background: linear-gradient(180deg, rgba(48, 41, 78, 0.9) 6.77%, #322A53 100%);
+}
+.preparo .room {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: center;
+    width: 100%;
+}
+.preparo .room div {
+    display: flex;
+    flex-direction: column;
+    background: #251F3F;
+    padding: 5px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: .5s;
+}
+.preparo .room div:hover {
+    transform: scale(1.02);
+}
+.preparo .room label{
+    font-size: 20px;
+    line-height: 25px;
+}
+.preparo .room a{
+    font-size: 30px;
+    font-weight: bold;
+    color: #DE9424;
+}
+.preparo .cam {
+    flex: 1;
+    width: 100%;
+    background: black;
+    margin: 5px;
+    position: relative;
+    border-radius: 2px;
+    box-shadow: 0px 0px 5px 0px #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.preparo .cam video {
+    width: 100%;
+    height: 100%;
+}
+.preparo .cam div {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: center;
+    position: absolute;
+    right: 0;
+    bottom: 5px;
+}
+.preparo .cam div button {
+    max-width: 40px !important;
+    width: 40px !important;
+    height: auto !important;
+    border-radius: 100%;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 5px 10px;
+    transition: .5s;
+}
+.preparo .cam div button:hover{
+    transform: scale(1.1);
+}
+.preparo .cam div button img {
+    max-width: inherit;
+}
+
+.preparo .cam .alias {
+    position: absolute;
+    bottom: 4px;
+    left: 4px;
+    font-size: 20px;
+    padding: 0px 5px;
+    background: lavender;
+    border-radius: 2px;
+    line-height: 35px;
+    background-color:darkmagenta;
+}
+
+.preparo input  {
+    padding: 10px;
+    width: 100%;
+    height: 60px;
+    margin: 10px 0;
+    border: 0;
+    border-radius: 5px;
+    font-size: 20px;
+}
+
+.btn-vermelho {
+    background: brown;
+}
+.btn-vermelho:hover {
+    background: rgb(194, 61, 61);
+}
+
 @media (min-width: 545px)  {
     .content {
         width: auto;
@@ -294,6 +410,12 @@ button:hover {
 }
 
 @media (min-width: 720px)  {
+    .preparo .cam, .preparo input, .preparo button  {
+        width: 450px;
+    }
+    .preparo .cam video {
+        width: 90%;
+    }
     .outhers {
         flex-direction: row;
         align-content: stretch;

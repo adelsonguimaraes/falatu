@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
 
     // chamando a splash
-    splash.show();
+    // splash.show();
 
     // state
     const state = {
@@ -10,8 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
         peerConnections: [],
         peerConnectionsIds: [],
         videoPeers: [],
-        streamVideo: null,
-        streamAudio: null,
+        stream: null,
         videoInFocus: null,
         screenSharing: null,
         screenSharingSender: [],
@@ -77,42 +76,49 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     
-    let slug = '';
-
     // check the room session
+    let slug = '';
     let r = sessionStorage.getItem('room');
-    let alias = sessionStorage.getItem('alias');
+    const hash = window.location.hash.replace('#', '');
+    // verificando se clicou em criar
+    const create = sessionStorage.getItem('create');
     
-    if (alias===null) alias = window.prompt('Isira um alias.');
-    if (alias === '') {
-        alert('Você precisa informar um alias!');
-        return window.location.replace('/');
-    }
-
-    sessionStorage.setItem('alias', alias);
-    
-    if (typeof(r) !== 'string') {
-        // check the room parameter
-        r = window.location.hash.replace('#', '');
-        if (r==='') {
-            alert('A sala não é válida');
+    if (!r) {
+        if (hash==='') {
             return window.location.replace('/');
+        }else{
+            slug = hash;
         }
-
-        sessionStorage.setItem('room', r);
-        slug = r;
     }else{
-        // conectando ao servidor
-        slug = r.trim().toLowerCase().replace(' ', '_');
+        slug = r;
     }
-
 
     // reforce hash
+    slug = slug.trim().toLowerCase().replace(' ', '_');
     window.location.hash = '#' + slug;
-    const create = sessionStorage.getItem('create');
 
-    socket.emit('join', slug, alias, create);
+    // verificando se a sala existe
+    socket.emit('check-room', slug);
+    socket.on('check-room', check => {
+        if (!check && !create) {
+            alert('A sala não foi encontrada, talvez o dono tenha encerrado a chamada.');
+            return window.location.replace('/');
+        }else{
+            // assim que entrar na room chama a tela de preparo
+            Preparo.show();
+        }
+    });
+    
+    // chamado pelo controle de preparo
+    iniciar = (stream, alias) => {
+        // adicionando stream
+        state.stream = stream;
+        
+        // verificando se clicou em criar
+        const create = sessionStorage.getItem('create');
 
+        socket.emit('join', slug, alias, create);
+    }
 
     socket.on('ivalid-room', () => {
         alert('A sala não é válida!');
@@ -132,14 +138,24 @@ document.addEventListener('DOMContentLoaded', () => {
         const btnScreen = document.querySelector('button.btn-screen');
         const btnExit = document.querySelector('.btn-exit');
 
+        // verificando estado das mídias
+        if(state.stream.getAudioTracks()[0] && !state.stream.getAudioTracks()[0].enabled) {
+            state.mymic = false;
+            btnMic.classList.remove('btn-mic-active');
+        }
+        if(state.stream.getVideoTracks()[0] && !state.stream.getVideoTracks()[0].enabled) {
+            state.mycam = false;
+            btnMic.classList.remove('btn-cam-active');
+        }
+
         // eventos de botões
         
         // cam
         btnCam.addEventListener('click', () => {
-            if (state.streamVideo===null) return showNotification('Câmera não está ativa!');
+            if (state.stream.getVideoTracks()[0]===null) return showNotification('Câmera não está ativa!');
             
             state.mycam = !state.mycam;
-            state.streamVideo.getTracks()[0].enabled = !state.streamVideo.getTracks()[0].enabled;
+            state.stream.getVideoTracks()[0].enabled = !state.stream.getVideoTracks()[0].enabled;
             if (state.mycam) {
                 btnCam.classList.add('btn-cam-active');
                 btnCam.title = "Mutar Câmera";
@@ -153,10 +169,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // mic
         btnMic.addEventListener('click', () => {
-            if (state.streamAudio===null) return showNotification('Microfone não está ativo!');
+            if (!state.stream.getAudioTracks()[0]) return showNotification('Microfone não está ativo!');
 
             state.mymic = !state.mymic;
-            state.streamAudio.getTracks()[0].enabled = !state.streamAudio.getTracks()[0].enabled;
+            state.stream.getAudioTracks()[0].enabled = !state.stream.getAudioTracks()[0].enabled;
             if (state.mymic) {
                 btnMic.classList.add('btn-mic-active');
                 btnMic.title = "Mutar Microfone";
@@ -314,6 +330,7 @@ document.addEventListener('DOMContentLoaded', () => {
             v.id = stream.id;
             v.srcObject = stream;
             v.controls = false;
+            if (pcId===0) v.muted = true;
             el.appendChild(v);
             outhers.appendChild(el);
 
@@ -359,32 +376,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // get user media function
-    getMyUserMedia = async () => {
-        const mediaStream = new MediaStream();
-
-        try {
-            state.streamAudio = await navigator.mediaDevices.getUserMedia({audio:true});
-            state.streamVideo = await navigator.mediaDevices.getUserMedia({video:true});
-
-            mediaStream.addTrack(state.streamAudio.getAudioTracks()[0]);
-            mediaStream.addTrack(state.streamVideo.getVideoTracks()[0]);
-        }catch(e) {
-            if (state.streamAudio === null && state.streamVideo===null) {
-                alert('Você precisa permitir no mínimo o aúdio para participar de uma sala!');
-                return window.location.replace('/');
-            }else{
-                if (state.streamAudio) mediaStream.addTrack(state.streamAudio.getAudioTracks()[0]);
-                if (state.streamVideo) mediaStream.addTrack(state.streamVideo.getVideoTracks()[0]);
-            }
-        }
-
-        // adicionado a grade de videos
-        addNewVideoElement(mediaStream, 0, alias);
-        // adicionando botões de chamada
-        adicionaButtons();
-    };
-
     // set peerconnection
     setPeerConnection = (pcId, alias) => {
         const conn = new RTCPeerConnection(iceServers);
@@ -401,9 +392,8 @@ document.addEventListener('DOMContentLoaded', () => {
             event.streams.forEach(stream => addNewVideoElement(stream, pcId, alias));
         };
 
-        const mediaStream = new MediaStream();
-        if (state.streamAudio!==null) conn.addTrack(state.streamAudio.getTracks()[0], mediaStream);
-        if (state.streamVideo!==null) conn.addTrack(state.streamVideo.getTracks()[0], mediaStream);
+        if (state.stream.getAudioTracks()[0]) conn.addTrack(state.stream.getAudioTracks()[0], state.stream);
+        if (state.stream.getVideoTracks()[0]) conn.addTrack(state.stream.getVideoTracks()[0], state.stream);
 
         // verificando se possui compartilhamento de tela ativo
         if (state.screenSharing) {
@@ -424,21 +414,29 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     
     // events socket from server response
-    socket.on('created', async (idSocket) => {
+    socket.on('created', async (idSocket, alias) => {
         state.creator = true;
         state.id = idSocket;
 
-        await getMyUserMedia();
+        // adicionado a grade de videos
+        addNewVideoElement(state.stream, 0, alias);
+        // adicionando botões de chamada
+        adicionaButtons();
+
         // effect audio
         playAudio('join');
         // quando a segunda pessoa entra
         // socket.emit('ready', slug, state.id);
     });
-    socket.on('joined', async (idSocket) => {
+    socket.on('joined', async (idSocket, alias) => {
         state.creator = false;
         state.id = idSocket;
         
-        await getMyUserMedia();
+        // adicionado a grade de videos
+        addNewVideoElement(state.stream, 0, alias);
+        // adicionando botões de chamada
+        adicionaButtons();
+        
         playAudio('join');
         // quando a segunda pessoa entra
         socket.emit('ready', slug, state.id);

@@ -34,6 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btnCriar.addEventListener('click', () => {
         const slug = Date.now();
         sessionStorage.setItem('create', slug);
+        sessionStorage.setItem('room', slug);
         window.location.replace(`/room#${slug}`);
     });
 

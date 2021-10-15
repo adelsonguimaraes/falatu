@@ -27,6 +27,14 @@ const aliases = [];
 io.on('connection', (socket) => {
     console.log('User connected: ' + socket.id);
 
+    // checa se a sala existe assim que o usuário
+    // entra na room antes de chamar a tela de preparo
+    socket.on('check-room', r => {
+        const rooms = io.sockets.adapter.rooms;
+        const room = rooms.get(r);
+        socket.emit('check-room', room);
+    });
+
     // join in room
     socket.on('join', (r, alias, create) => {
         const rooms = io.sockets.adapter.rooms;
@@ -36,17 +44,11 @@ io.on('connection', (socket) => {
 
         // if room undefined, create room
         if (room === undefined) {
-            if (!create) {
-                delete aliases[socket.id];
-                // removendo o socket da sala
-                socket.leave(r);
-                return socket.emit('ivalid-room');
-            }
             // adicioando o socket a sala
             socket.join(r);
             // enviando sinal de resposta ao socket
             // sinalizando sala criada
-            socket.emit('created', socket.id);
+            socket.emit('created', socket.id, alias);
             console.log('Room Created');
 
         // if room 1 people, joining room
@@ -55,7 +57,7 @@ io.on('connection', (socket) => {
             socket.join(r);
             // enviando sinal para o socket
             // de entrada na sala
-            socket.emit('joined', socket.id);
+            socket.emit('joined', socket.id, alias);
             console.log('Room Joined');
 
         // or room fully
