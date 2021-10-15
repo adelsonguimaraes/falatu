@@ -28,7 +28,7 @@ io.on('connection', (socket) => {
     console.log('User connected: ' + socket.id);
 
     // join in room
-    socket.on('join', (r, alias) => {
+    socket.on('join', (r, alias, create) => {
         const rooms = io.sockets.adapter.rooms;
         const room = rooms.get(r);
 
@@ -36,6 +36,12 @@ io.on('connection', (socket) => {
 
         // if room undefined, create room
         if (room === undefined) {
+            if (!create) {
+                delete aliases[socket.id];
+                // removendo o socket da sala
+                socket.leave(r);
+                return socket.emit('ivalid-room');
+            }
             // adicioando o socket a sala
             socket.join(r);
             // enviando sinal de resposta ao socket

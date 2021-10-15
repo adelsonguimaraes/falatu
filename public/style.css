@@ -272,6 +272,11 @@ button:hover {
 }
 
 @media (min-width: 545px)  {
+    .content {
+        width: auto;
+        height: auto;
+        flex: auto;
+    }
     .outher {
         flex: 16rem;
     }

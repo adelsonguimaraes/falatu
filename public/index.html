@@ -13,11 +13,16 @@
             <img src="./assets/images/logo.png">
         </div>
         <div class="content">
-            <label for="">Apelido</label>
-            <input type="text" name="alias" placeholder="Seu apelido">
-            <label for="">Insira a sala</label>
-            <input type="text" name="sala" placeholder="Nome da sala">
-            <button id="acessar" type="button">ACESSAR</button>
+            <!-- <label for="">Apelido</label>
+            <input type="text" name="alias" placeholder="Seu apelido"> -->
+            <label for="">Participar</label>
+            <div style="display:flex;">
+                <input type="text" name="sala" style="flex: 1;" autocomplete="off" placeholder="Código da sala">
+                <button id="acessar" type="button" style="width:65px; background-color: #5a73b3;" disabled="true">
+                    <img src="./assets/images/btn_power.png">
+                </button>
+            </div>
+            <button id="criar" type="button" style="background-color: #C94921;">Criar Sala</button>
         </div>
     </div>
 

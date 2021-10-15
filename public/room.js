@@ -23,12 +23,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // room
     const socket = io('/');
-    const btnCam = document.querySelector('.btn-cam');
-    const btnMic = document.querySelector('.btn-mic');
-    const btnExit = document.querySelector('.btn-exit');
-    const mycam = document.querySelector('.my-cam video');
     const outhers = document.querySelector('div .outhers');
-    // const outhercam = document.querySelector('.outher video');
+    const buttonsBox = document.querySelector('.buttons-cam');
     const notification = document.querySelector('.notification');
 
     // ice servers
@@ -51,36 +47,6 @@ document.addEventListener('DOMContentLoaded', () => {
             notification.classList.remove('notification-active');
         }, [4000]);
     };
-
-    // cam
-    btnCam.addEventListener('click', () => {
-        if (state.streamVideo===null) return showNotification('Câmera não está ativa!');
-        
-        state.mycam = !state.mycam;
-        state.streamVideo.getTracks()[0].enabled = !state.streamVideo.getTracks()[0].enabled;
-        if (state.mycam) {
-            btnCam.classList.add('btn-cam-active');
-        }else{
-            btnCam.classList.remove('btn-cam-active');
-        }
-
-        socket.emit('mic-cam-toggle', r, state.mymic, state.mycam);
-    });
-
-    // mic
-    btnMic.addEventListener('click', () => {
-        if (state.streamAudio===null) return showNotification('Microfone não está ativo!');
-
-        state.mymic = !state.mymic;
-        state.streamAudio.getTracks()[0].enabled = !state.streamAudio.getTracks()[0].enabled;
-        if (state.mymic) {
-            btnMic.classList.add('btn-mic-active');
-        }else{
-            btnMic.classList.remove('btn-mic-active');
-        }
-
-        socket.emit('mic-cam-toggle', r, state.mymic, state.mycam);
-    });
 
     socket.on('mic-cam-toggle', (pcId, statusMic, statusCam) => {
         if (!statusMic) {
@@ -129,7 +95,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // check the room parameter
         r = window.location.hash.replace('#', '');
         if (r==='') {
-            alert('A sala não é válida!');
+            alert('A sala não é válida');
             return window.location.replace('/');
         }
 
@@ -143,11 +109,157 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // reforce hash
     window.location.hash = '#' + slug;
+    const create = sessionStorage.getItem('create');
 
-    socket.emit('join', slug, alias);
+    socket.emit('join', slug, alias, create);
 
 
+    socket.on('ivalid-room', () => {
+        alert('A sala não é válida!');
+        return window.location.replace('/');
+    });
 
+    adicionaButtons = () => {
+        buttonsBox.innerHTML = `
+            <button class="btn-cam btn-cam-active" title="Mutar Câmera"></button>
+            <button class="btn-mic btn-mic-active" title="Mutar Microfone"></button>
+            <button class="btn-screen" title="Compartilhar Tela"></button>
+            <button class="btn-exit" title="Sair da Sala"></button>
+        `;
+
+        const btnCam = document.querySelector('.btn-cam');
+        const btnMic = document.querySelector('.btn-mic');
+        const btnScreen = document.querySelector('button.btn-screen');
+        const btnExit = document.querySelector('.btn-exit');
+
+        // eventos de botões
+        
+        // cam
+        btnCam.addEventListener('click', () => {
+            if (state.streamVideo===null) return showNotification('Câmera não está ativa!');
+            
+            state.mycam = !state.mycam;
+            state.streamVideo.getTracks()[0].enabled = !state.streamVideo.getTracks()[0].enabled;
+            if (state.mycam) {
+                btnCam.classList.add('btn-cam-active');
+                btnCam.title = "Mutar Câmera";
+            }else{
+                btnCam.classList.remove('btn-cam-active');
+                btnCam.title = "Desmutar Câmera";
+            }
+
+            socket.emit('mic-cam-toggle', r, state.mymic, state.mycam);
+        });
+
+        // mic
+        btnMic.addEventListener('click', () => {
+            if (state.streamAudio===null) return showNotification('Microfone não está ativo!');
+
+            state.mymic = !state.mymic;
+            state.streamAudio.getTracks()[0].enabled = !state.streamAudio.getTracks()[0].enabled;
+            if (state.mymic) {
+                btnMic.classList.add('btn-mic-active');
+                btnMic.title = "Mutar Microfone";
+            }else{
+                btnMic.classList.remove('btn-mic-active');
+                btnMic.title = "Desmutar Microfone";
+            }
+
+            socket.emit('mic-cam-toggle', r, state.mymic, state.mycam);
+        });
+
+        // se for mobile remove botão de compartilhar tela
+        if (navigator.userAgentData.mobile) btnScreen.remove();
+
+        btnScreen.addEventListener('click', async () => {
+
+            try {
+                // verificando se há conexões peers
+                if (state.peerConnectionsIds.length===0) {
+                    return showNotification('Nenhuma conexão para compartilhar a tela!');
+                }
+
+                // caso a tela já esteja sendo compartilhada derrubamos
+                if (state.screenSharing!=null) {
+                    // se tiver uma tela conectada para tudo
+                    state.screenSharing.getTracks().forEach(track => track.stop());
+                    socket.emit('stop-screen-sharing', r, state.screenSharing.id);
+                    state.screenSharing = null;
+                    state.screenSharingSender = [];
+
+                    state.myscreen = !state.myscreen;
+                    (state.myscreen) ? btnScreen.classList.add('btn-screen-active') : btnScreen.classList.remove('btn-screen-active');
+
+                    showNotification(`Compartilhamento de tela finalizado`);
+                    playAudio('screen_sharing_stop');
+
+                    btnScreen.title = "Compartilhar Tela";
+
+                    return true;
+                }
+
+                const screenSharing = await navigator.mediaDevices.getDisplayMedia({
+                    video: true
+                });
+
+                state.myscreen = !state.myscreen;
+                (state.myscreen) ? btnScreen.classList.add('btn-screen-active') : btnScreen.classList.remove('btn-screen-active');
+
+                    // caso a tela já esteja sendo compartilhada substitui
+                // if (Object.keys(state.screenSharingSender).length>0) {
+                    // suspendendo por enquanto a atualização de uma tela já compartilhada
+                    // return state.peerConnectionsIds.forEach(pcId => {
+                    //     state.screenSharingSender[pcId].replaceTrack(screenSharing.getVideoTracks()[0]);
+                    // });
+                // }
+                
+                state.screenSharing = screenSharing;
+                
+                // evento quando o compartilhamento for finalizado
+                screenSharing.getVideoTracks()[0].onended = (e) => {
+                    state.screenSharing.getTracks().forEach(track => track.stop());
+                    socket.emit('stop-screen-sharing', r, state.screenSharing.id);
+                    state.screenSharing = null;
+                    state.screenSharingSender = [];
+                }
+
+                // listando peers connections
+                state.peerConnectionsIds.forEach(pcId => {
+                    for (const track of screenSharing.getTracks()) {
+                        const ss = state.peerConnections[pcId].addTrack(track, screenSharing);
+                        state.screenSharingSender[pcId] = ss;
+                    };
+                });
+
+                // criando a oferta pra cada par
+                state.peerConnectionsIds.forEach(pcId => {
+                    state.peerConnections[pcId].createOffer()
+                    .then((offer) => {
+                        state.peerConnections[pcId].setLocalDescription(offer);
+                        socket.emit('offer-screen-sharing', offer, pcId);
+                    })
+                    .catch((err) => {
+                        console.error(err);
+                    });
+                });
+
+                showNotification(`Compartilhamento de tela iniciado`);
+                playAudio('screen_sharing');
+
+                btnScreen.title = "Parar Compartilhamento";
+
+
+            } catch (e) {
+                console.error('O usuário não deu permissão de compartilhar a tela ou cancelou.', e); 
+            }
+        });
+
+        // exit
+        btnExit.addEventListener('click', () => {
+            socket.emit('leave', slug);
+            window.location.replace('/');
+        });
+    }
 
     calcVideosStyle = () => {
         const len = document.querySelectorAll('.outhers video').length;
@@ -256,9 +368,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 // adicionado a grade de videos
                 addNewVideoElement(state.streamVideo, 0, alias);
             }
+
+            // adicionando botões de chamada
+            adicionaButtons();
+
         }catch(e) {
             if (state.streamAudio === null && state.streamVideo===null) {
-                alert('Você precisa permitir no mínimo o Audio para participar de uma chamada!');
+                alert('Você precisa permitir no mínimo o Audio para participar de uma sala!');
                 window.location.replace('/');
             }
         }
@@ -323,14 +439,14 @@ document.addEventListener('DOMContentLoaded', () => {
         socket.emit('ready', slug, state.id);
     });
     socket.on('full', () => {
-        alert("Opa! A sala atingiu o total suportado!");
+        alert("Opa! A sala atingiu o total suportado");
         return window.location.replace('/');
     });
     socket.on('ready', (pcId, alias) => {
         playAudio('outher_join');
         
         // alert('Um parceiro chegou!');
-        showNotification(`${alias} entrou na chamada!`);
+        showNotification(`${alias} entrou na sala`);
 
         setPeerConnection(pcId, alias);
 
@@ -413,90 +529,6 @@ document.addEventListener('DOMContentLoaded', () => {
         calcVideosStyle();
     };
 
-    // showDisplay 
-    const btnScreen = document.querySelector('button.btn-screen');
-    
-    // se for mobile remove botão de compartilhar tela
-    if (navigator.userAgentData.mobile) btnScreen.remove();
-
-    btnScreen.addEventListener('click', async () => {
-
-        try {
-            // verificando se há conexões peers
-            if (state.peerConnectionsIds.length===0) {
-                return showNotification('Nenhuma conexão para compartilhar a tela!');
-            }
-
-            // caso a tela já esteja sendo compartilhada derrubamos
-            if (state.screenSharing!=null) {
-                // se tiver uma tela conectada para tudo
-                state.screenSharing.getTracks().forEach(track => track.stop());
-                socket.emit('stop-screen-sharing', r, state.screenSharing.id);
-                state.screenSharing = null;
-                state.screenSharingSender = [];
-
-                state.myscreen = !state.myscreen;
-                (state.myscreen) ? btnScreen.classList.add('btn-screen-active') : btnScreen.classList.remove('btn-screen-active');
-
-                showNotification(`Compartilhamento de tela finalizado`);
-                playAudio('screen_sharing_stop');
-
-                return true;
-            }
-
-            const screenSharing = await navigator.mediaDevices.getDisplayMedia({
-                video: true
-            });
-
-            state.myscreen = !state.myscreen;
-            (state.myscreen) ? btnScreen.classList.add('btn-screen-active') : btnScreen.classList.remove('btn-screen-active');
-
-                // caso a tela já esteja sendo compartilhada substitui
-            // if (Object.keys(state.screenSharingSender).length>0) {
-                // suspendendo por enquanto a atualização de uma tela já compartilhada
-                // return state.peerConnectionsIds.forEach(pcId => {
-                //     state.screenSharingSender[pcId].replaceTrack(screenSharing.getVideoTracks()[0]);
-                // });
-            // }
-            
-            state.screenSharing = screenSharing;
-            
-            // evento quando o compartilhamento for finalizado
-            screenSharing.getVideoTracks()[0].onended = (e) => {
-                state.screenSharing.getTracks().forEach(track => track.stop());
-                socket.emit('stop-screen-sharing', r, state.screenSharing.id);
-                state.screenSharing = null;
-                state.screenSharingSender = [];
-            }
-
-            // listando peers connections
-            state.peerConnectionsIds.forEach(pcId => {
-                for (const track of screenSharing.getTracks()) {
-                    const ss = state.peerConnections[pcId].addTrack(track, screenSharing);
-                    state.screenSharingSender[pcId] = ss;
-                };
-            });
-
-            // criando a oferta pra cada par
-            state.peerConnectionsIds.forEach(pcId => {
-                state.peerConnections[pcId].createOffer()
-                .then((offer) => {
-                    state.peerConnections[pcId].setLocalDescription(offer);
-                    socket.emit('offer-screen-sharing', offer, pcId);
-                })
-                .catch((err) => {
-                    console.error(err);
-                });
-            });
-
-            showNotification(`Compartilhamento de tela iniciado`);
-            playAudio('screen_sharing');
-
-        } catch (e) {
-           console.error('O usuário não deu permissão de compartilhar a tela ou cancelou.', e); 
-        }
-    });
-
     // recebendo o evento de parada de compartilhamento de tela
     socket.on('stop-screen-sharing', (streamId, pcId, alias) => {
         showNotification(`${alias} finalizou o compartilhamento de tela.`);
@@ -522,16 +554,11 @@ document.addEventListener('DOMContentLoaded', () => {
         calcVideosStyle();
     })
 
-    // exit
-    btnExit.addEventListener('click', () => {
-        socket.emit('leave', slug);
-        window.location.replace('/');
-    });
-
     socket.on('leave', (pcId, alias) => {
-        playAudio('outher_disconnect');
-
-        showNotification(`${alias} saiu da chamada!`);
-        stopOutherStream(pcId);
+        if (state.peerConnections[pcId]) {
+            playAudio('outher_disconnect');
+            showNotification(`${alias} saiu da sala`);
+            stopOutherStream(pcId);
+        }
     });
 });
