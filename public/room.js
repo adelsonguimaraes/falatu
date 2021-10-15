@@ -359,25 +359,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // get user media function
     getMyUserMedia = async () => {
+        const mediaStream = new MediaStream();
+
         try {
-            // const mediaStream = new MediaStream();
             state.streamAudio = await navigator.mediaDevices.getUserMedia({audio:true});
             state.streamVideo = await navigator.mediaDevices.getUserMedia({video:true});
 
-            if (state.streamVideo) {
-                // adicionado a grade de videos
-                addNewVideoElement(state.streamVideo, 0, alias);
-            }
-
-            // adicionando botões de chamada
-            adicionaButtons();
-
+            mediaStream.addTrack(state.streamAudio.getAudioTracks()[0]);
+            mediaStream.addTrack(state.streamVideo.getVideoTracks()[0]);
         }catch(e) {
             if (state.streamAudio === null && state.streamVideo===null) {
-                alert('Você precisa permitir no mínimo o Audio para participar de uma sala!');
-                window.location.replace('/');
+                alert('Você precisa permitir no mínimo o aúdio para participar de uma sala!');
+                return window.location.replace('/');
+            }else{
+                if (state.streamAudio) mediaStream.addTrack(state.streamAudio.getAudioTracks()[0]);
+                if (state.streamVideo) mediaStream.addTrack(state.streamVideo.getVideoTracks()[0]);
             }
         }
+
+        // adicionado a grade de videos
+        addNewVideoElement(mediaStream, 0, alias);
+        // adicionando botões de chamada
+        adicionaButtons();
     };
 
     // set peerconnection
