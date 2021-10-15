@@ -38,7 +38,10 @@ const Preparo = {
         const btnPreparoSair = document.getElementById('preparo_sair');
 
         let alias = sessionStorage.getItem('alias');
-        if (alias) inputPreparo.value = alias;
+        if (alias) {
+            inputPreparo.value = alias;
+            preparoAlias.innerHTML = alias;
+        }
 
         inputPreparo.addEventListener('input', (e) => {
             e.target.value = e.target.value.substring(0, 10);
