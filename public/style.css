@@ -124,7 +124,7 @@ button:hover {
     cursor: pointer;
     border: 1px solid #7b7b7b;
     border-radius: 2px;
-    transition: .5s;
+    transition: .3s ease-in-out;
 }
 .outher video {
     width: 99%;
@@ -266,9 +266,49 @@ button:hover {
     display: flex;
     flex: auto;
     flex-wrap: wrap;
-    background-color: #26203e70;
     justify-content: center;
     position: relative;
+}
+.infocus .outher {
+    height: auto !important;
+    flex: 1 !important;
+}
+.video-box .outhers-infocus {
+    justify-content: flex-end;
+    align-items: flex-end;
+    flex-direction: row !important;
+    align-content: flex-end !important;
+    position: absolute;
+    width: 300px;
+    right: 15px;
+    top: 5px;
+}
+.outher-infocus {
+    border-radius: 100%;
+    height: 70px !important;
+    flex: 0 70px !important;
+    overflow: visible;
+    position: relative;
+    margin: 3px 3px;
+}
+.outher-infocus video {
+    border-radius: 100%;
+}
+.outher-infocus .mic-muted-overlay {
+    top: 10px !important;
+    width: 25px !important;
+}
+.outher-infocus .cam-muted-overlay {
+    top: 34px !important;
+    width: 25px !important;
+}
+.outher .h1-infocus {
+    font-size: 11px;
+    padding: 1px 3px;
+    left: auto;
+    bottom: -30px;
+    width: auto;
+    position: absolute;
 }
 
 .preparo {
@@ -424,6 +464,7 @@ button:hover {
     }
     .outher {
         flex: 1 20rem;
+        margin: 3px;
         cursor: pointer;
     }
     .outher h1 {

@@ -79,9 +79,10 @@ const Preparo = {
 
             sessionStorage.setItem('alias', alias);
 
-            iniciar(stream, alias);
-
             preparo.remove();
+            
+            iniciar(stream, alias);
+            
         });
 
         btnPreparoSair.addEventListener('click', (e) => {

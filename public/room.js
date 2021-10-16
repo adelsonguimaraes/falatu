@@ -1,8 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
 
-    // chamando a splash
-    // splash.show();
-
     // state
     const state = {
         // peerConnection: null,
@@ -48,6 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     socket.on('mic-cam-toggle', (pcId, statusMic, statusCam) => {
+
         if (!statusMic) {
             const imgMic = state.videoPeers[pcId][0].querySelector('.mic-muted-overlay');
             if (!imgMic) {
@@ -164,7 +162,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 btnCam.title = "Desmutar Câmera";
             }
 
-            socket.emit('mic-cam-toggle', r, state.mymic, state.mycam);
+            socket.emit('mic-cam-toggle', slug, state.mymic, state.mycam);
         });
 
         // mic
@@ -181,7 +179,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 btnMic.title = "Desmutar Microfone";
             }
 
-            socket.emit('mic-cam-toggle', r, state.mymic, state.mycam);
+            socket.emit('mic-cam-toggle', slug, state.mymic, state.mycam);
         });
 
         // se for mobile remove botão de compartilhar tela
@@ -201,7 +199,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (state.screenSharing!=null) {
                     // se tiver uma tela conectada para tudo
                     state.screenSharing.getTracks().forEach(track => track.stop());
-                    socket.emit('stop-screen-sharing', r, state.screenSharing.id);
+                    socket.emit('stop-screen-sharing', slug, state.screenSharing.id);
                     state.screenSharing = null;
                     state.screenSharingSender = [];
 
@@ -209,7 +207,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     (state.myscreen) ? btnScreen.classList.add('btn-screen-active') : btnScreen.classList.remove('btn-screen-active');
 
                     showNotification(`Compartilhamento de tela finalizado`);
-                    playAudio('screen_sharing_stop');
+                    AudioEffect.play('screen_sharing_stop');
 
                     btnScreen.title = "Compartilhar Tela";
 
@@ -236,7 +234,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // evento quando o compartilhamento for finalizado
                 screenSharing.getVideoTracks()[0].onended = (e) => {
                     state.screenSharing.getTracks().forEach(track => track.stop());
-                    socket.emit('stop-screen-sharing', r, state.screenSharing.id);
+                    socket.emit('stop-screen-sharing', slug, state.screenSharing.id);
                     state.screenSharing = null;
                     state.screenSharingSender = [];
                 }
@@ -262,7 +260,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
 
                 showNotification(`Compartilhamento de tela iniciado`);
-                playAudio('screen_sharing');
+                AudioEffect.play('screen_sharing');
 
                 btnScreen.title = "Parar Compartilhamento";
 
@@ -296,6 +294,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    removeVideoInfocus = (v) => {
+        const outhers = document.querySelector('.outhers');
+        outhers.appendChild(v.parentElement);
+        state.videoInFocus.remove();
+        state.videoInFocus = null;
+
+        // adicionando em outher a class outhers infocus
+        outhers.classList.remove('outhers-infocus');
+        Array.from(outhers.querySelectorAll('.outher'))
+        .forEach(e => {
+            e.querySelector('h1').classList.remove('h1-infocus');
+            e.classList.remove('outher-infocus')
+        });
+    }
+
     // add new video element
     addNewVideoElement = (stream, pcId, alias='Alias') => {
 
@@ -320,10 +333,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const el = document.createElement('div');
             el.classList.add('outher');
             el.classList.add('multicam');
+            if (state.videoInFocus) el.classList.add('outher-infocus');
 
             const h1 = document.createElement('h1');
             h1.innerText = label+' '+alias;
             h1.style.backgroundColor = color;
+            if (state.videoInFocus) h1.classList.add('h1-infocus');
+
             el.appendChild(h1);
 
             const v = document.createElement('video');
@@ -349,24 +365,38 @@ document.addEventListener('DOMContentLoaded', () => {
                     document.querySelector('.video-box').prepend(infocus);
                     state.videoInFocus = infocus;
 
+                    // adicionando em outher a class outhers infocus
+                    outhers.classList.add('outhers-infocus');
+                    Array.from(outhers.querySelectorAll('.outher'))
+                    .forEach(e => {
+                        e.querySelector('h1').classList.add('h1-infocus');
+                        e.classList.add('outher-infocus')
+                    });
+
                     showNotification(`${h1.innerText} colocado em foco.`);
 
                 }else if (state.videoInFocus.firstChild === v.parentElement){
-                    const outhers = document.querySelector('.outhers');
-                    outhers.appendChild(v.parentElement);
-                    state.videoInFocus.remove();
-                    state.videoInFocus = null;
-
+                    removeVideoInfocus(v);
                 }else{
                     const outhers = document.querySelector('.outhers');
+                    // adicionando os estilos infocus
+                    state.videoInFocus.firstChild.classList.add('outher-infocus');
+                    state.videoInFocus.firstChild.querySelector('h1')
+                    .classList.add('h1-infocus');
                     outhers.appendChild(state.videoInFocus.firstChild);
+                    
+                    // revemovendos os estilos infocus
+                    v.parentElement.classList.remove('outher-infocus');
+                    v.parentElement.querySelector('h1')
+                    .classList.remove('h1-infocus');
+
                     state.videoInFocus.appendChild(v.parentElement);
 
                     showNotification(`${h1.innerText} colocado em foco.`);
                 }
 
                 // calculando no evento de click do infocus
-                calcVideosStyle();
+                // calcVideosStyle();
             }
 
             state.videoPeers[pcId].push(el);
@@ -405,13 +435,6 @@ document.addEventListener('DOMContentLoaded', () => {
         state.peerConnectionsIds.push(pcId);
         state.peerConnections[pcId] = conn;
     }
-
-    playAudio = (a) => {
-        const audio = new Audio();
-        audio.volume = .5;
-        audio.src = './assets/audio/'+a+'.mp3';
-        audio.play();
-    };
     
     // events socket from server response
     socket.on('created', async (idSocket, alias) => {
@@ -424,7 +447,7 @@ document.addEventListener('DOMContentLoaded', () => {
         adicionaButtons();
 
         // effect audio
-        playAudio('join');
+        AudioEffect.play('join');
         // quando a segunda pessoa entra
         // socket.emit('ready', slug, state.id);
     });
@@ -437,7 +460,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // adicionando botões de chamada
         adicionaButtons();
         
-        playAudio('join');
+        AudioEffect.play('join');
         // quando a segunda pessoa entra
         socket.emit('ready', slug, state.id);
     });
@@ -446,7 +469,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return window.location.replace('/');
     });
     socket.on('ready', (pcId, alias) => {
-        playAudio('outher_join');
+        AudioEffect.play('outher_join');
         
         // alert('Um parceiro chegou!');
         showNotification(`${alias} entrou na sala`);
@@ -487,7 +510,7 @@ document.addEventListener('DOMContentLoaded', () => {
     socket.on('offer-screen-sharing', async (offer, pcId, alias) => {
         showNotification(`${alias} iniciou um compartilhamento de tela.`);
 
-        playAudio('screen_sharing');
+        AudioEffect.play('screen_sharing');
         
         state.peerConnections[pcId].setRemoteDescription(offer);
         const answer = await state.peerConnections[pcId].createAnswer();
@@ -497,7 +520,7 @@ document.addEventListener('DOMContentLoaded', () => {
     socket.on('answer', (answer, pcId) => {
         state.peerConnections[pcId].setRemoteDescription(answer);
         // enviando status de mute do mic
-        socket.emit('mic-cam-toggle', r, state.mymic, state.mycam)
+        socket.emit('mic-cam-toggle', slug, state.mymic, state.mycam)
     });
 
     stopOutherStream = (pcId) => {
@@ -505,8 +528,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (state.videoPeers[pcId]) {
             state.videoPeers[pcId].forEach((v) => {
                     if (state.videoInFocus && state.videoInFocus.firstChild === v) {
-                        state.videoInFocus.remove();
-                        state.videoInFocus = null;
+                        removeVideoInfocus(v);
                     }
                     v.remove();
                 }
@@ -536,7 +558,7 @@ document.addEventListener('DOMContentLoaded', () => {
     socket.on('stop-screen-sharing', (streamId, pcId, alias) => {
         showNotification(`${alias} finalizou o compartilhamento de tela.`);
 
-        playAudio('screen_sharing_stop');
+        AudioEffect.play('screen_sharing_stop');
 
         // buscando dentro dos videos do par
         state.videoPeers[pcId].forEach((v, index) => {
@@ -544,8 +566,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (v.querySelector('video').id.toString() === streamId.toString()) {
                 // removendo se estiver infocus
                 if (state.videoInFocus && state.videoInFocus.firstChild === v) {
-                    state.videoInFocus.remove();
-                    state.videoInFocus = null;
+                    removeVideoInfocus(v);
                 }
                 // removendo o elemento do dom
                 v.remove();
@@ -559,7 +580,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     socket.on('leave', (pcId, alias) => {
         if (state.peerConnections[pcId]) {
-            playAudio('outher_disconnect');
+            AudioEffect.play('outher_disconnect');
             showNotification(`${alias} saiu da sala`);
             stopOutherStream(pcId);
         }

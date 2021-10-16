@@ -120,6 +120,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('mic-cam-toggle', (r, statusMic, statusCam) => {
+        console.log(r, statusCam, statusMic);
         socket.broadcast.to(r).emit('mic-cam-toggle', socket.id, statusMic, statusCam);
     });
     

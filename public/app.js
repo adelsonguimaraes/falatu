@@ -40,4 +40,5 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // chamando a splash
     splash.show();
+    AudioEffect.play('logo');
 });
