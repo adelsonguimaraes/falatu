@@ -215,7 +215,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 const screenSharing = await navigator.mediaDevices.getDisplayMedia({
-                    video: true
+                    video: true,
+                    audio: true
                 });
 
                 state.myscreen = !state.myscreen;
