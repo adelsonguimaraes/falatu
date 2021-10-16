@@ -85,9 +85,9 @@ io.on('connection', (socket) => {
     });
 
     // recebendo a oferta
-    socket.on('offer', (o, pcId) => {
+    socket.on('offer', (o, pcId, statusMic, statusCam) => {
         // repassando a oferta para a outra ponta com nosso id de conexão
-        socket.broadcast.to(pcId).emit('offer', o, socket.id, aliases[socket.id]);
+        socket.broadcast.to(pcId).emit('offer', o, socket.id, aliases[socket.id], statusMic, statusCam);
     });
 
     // recebendo a oferta
@@ -98,9 +98,9 @@ io.on('connection', (socket) => {
     });
 
     // recebendo a resposta
-    socket.on('answer', (a, pcId) => {
+    socket.on('answer', (a, pcId, statusMic, statusCam) => {
         // repassando a resposta para a outra ponta com nosso id de conexão
-        socket.broadcast.to(pcId).emit('answer', a, socket.id);
+        socket.broadcast.to(pcId).emit('answer', a, socket.id, statusMic, statusCam);
     })
 
     // recebendo sinal de fim de compartilhamento de tela
@@ -120,7 +120,6 @@ io.on('connection', (socket) => {
     });
 
     socket.on('mic-cam-toggle', (r, statusMic, statusCam) => {
-        console.log(r, statusCam, statusMic);
         socket.broadcast.to(r).emit('mic-cam-toggle', socket.id, statusMic, statusCam);
     });
     

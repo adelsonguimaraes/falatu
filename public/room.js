@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
         peerConnections: [],
         peerConnectionsIds: [],
         videoPeers: [],
+        MediaPeers: [],
         stream: null,
         videoInFocus: null,
         screenSharing: null,
@@ -44,9 +45,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }, [4000]);
     };
 
-    socket.on('mic-cam-toggle', (pcId, statusMic, statusCam) => {
+    // setando o status de media do peer (video, audio)
+    setMediaStatus = (pcId, statusMic, statusCam) => {
+        state.MediaPeers[pcId] = {audio: statusMic, video: statusCam};
+        // se já possuir vídeo desse peer chamamos o tratamento dos icones na tela
+        if (state.videoPeers[pcId]) setIconMediaStatus(pcId);
+    }
 
-        if (!statusMic) {
+    // setando os icones de status de media do peer na tela (video, audio)
+    setIconMediaStatus = (pcId) => {
+        
+        if (!state.MediaPeers[pcId].audio) {
             const imgMic = state.videoPeers[pcId][0].querySelector('.mic-muted-overlay');
             if (!imgMic) {
                 const img = document.createElement('img');
@@ -55,11 +64,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 state.videoPeers[pcId][0].appendChild(img);
             }
         }else{
-            const el = state.videoPeers[pcId][0].querySelector('.mic-muted-overlay');
-            if (el) el.remove();
+            if (state.videoPeers[pcId]) {
+                const el = state.videoPeers[pcId][0].querySelector('.mic-muted-overlay');
+                if (el) el.remove();
+            }   
         }
 
-        if (!statusCam) {
+        if (!state.MediaPeers[pcId].video) {
             const imgCam = state.videoPeers[pcId][0].querySelector('.cam-muted-overlay');
             if (!imgCam) {
                 const img = document.createElement('img');
@@ -71,6 +82,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const el = state.videoPeers[pcId][0].querySelector('.cam-muted-overlay');
             if (el) el.remove();
         }
+    }
+
+    socket.on('mic-cam-toggle', (pcId, statusMic, statusCam) => {
+        setMediaStatus(pcId, statusMic, statusCam);
     });
 
     
@@ -347,6 +362,7 @@ document.addEventListener('DOMContentLoaded', () => {
             v.controls = false;
             if (pcId===0) v.muted = true;
             el.appendChild(v);
+
             outhers.appendChild(el);
 
             v.onloadedmetadata = (e) => {
@@ -401,6 +417,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             state.videoPeers[pcId].push(el);
+
+            // se for a camera
+            // verificando e adicionando status de media se mutado
+            if (state.videoPeers[pcId].length===1 && pcId!==0) setIconMediaStatus(pcId);
 
             // calculando quando adiciona um video novo
             calcVideosStyle();
@@ -481,7 +501,7 @@ document.addEventListener('DOMContentLoaded', () => {
         state.peerConnections[pcId].createOffer()
         .then((offer) => {
             state.peerConnections[pcId].setLocalDescription(offer);
-            socket.emit('offer', offer, pcId);
+            socket.emit('offer', offer, pcId, state.mymic, state.mycam);
         })
         .catch((err) => {
             console.error(err);
@@ -491,9 +511,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const iceCandidate = new RTCIceCandidate(cadidate);
         state.peerConnections[pcId].addIceCandidate(iceCandidate);
     });
-    socket.on('offer', (offer, pcId, alias) => {
+    socket.on('offer', (offer, pcId, alias, statusMic, statusCam) => {
         if (state.peerConnections[pcId]===undefined) {
             setPeerConnection(pcId, alias);
+            setMediaStatus(pcId, statusMic, statusCam);
         }
         
         state.peerConnections[pcId].setRemoteDescription(offer);
@@ -502,10 +523,7 @@ document.addEventListener('DOMContentLoaded', () => {
         state.peerConnections[pcId].createAnswer()
         .then((answer) => {
             state.peerConnections[pcId].setLocalDescription(answer);
-            socket.emit('answer', answer, pcId);
-
-            // enviando status de mute do mic
-            socket.emit('mic-cam-toggle', slug, state.mymic, state.mycam);
+            socket.emit('answer', answer, pcId, state.mymic, state.mycam);
         })
         .catch((err) => {
             console.error(err);
@@ -521,8 +539,9 @@ document.addEventListener('DOMContentLoaded', () => {
         state.peerConnections[pcId].setLocalDescription(answer);
         socket.emit('answer', answer, pcId);
     });
-    socket.on('answer', (answer, pcId) => {
+    socket.on('answer', (answer, pcId, statusMic, statusCam) => {
         state.peerConnections[pcId].setRemoteDescription(answer);
+        setMediaStatus(pcId, statusMic, statusCam);
     });
 
     stopOutherStream = (pcId) => {
