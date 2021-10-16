@@ -22,7 +22,7 @@ const Preparo = {
                 </div>
             </div>
             <label>Insira seu Alias</label>
-            <input id="preparo_input" type="text" placeholder="Insira seu Alias">
+            <input id="preparo_input" type="text" placeholder="Insira seu Alias" autocomplete="off">
             <button id="preparo_pronto" type="button">Pronto</button>
             <button id="preparo_sair" type="button" class="btn-vermelho">Sair</button>
         `;
@@ -90,6 +90,7 @@ const Preparo = {
         });
 
         const stream = await this.getMedia();
+
         if (!stream.getAudioTracks()[0]) btnPreparoMic.querySelector('img').src = './assets/images/btn_mic_mute.png';
         if (!stream.getVideoTracks()[0]) btnPreparoCam.querySelector('img').src = './assets/images/btn_cam_mute.png';
         preparoVideo.srcObject = stream;
@@ -102,7 +103,11 @@ const Preparo = {
         let streamVideo = null;
 
         try {
-            streamAudio = await navigator.mediaDevices.getUserMedia({audio:true});
+            streamAudio = await navigator.mediaDevices.getUserMedia({audio: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                sampleRate: 44100
+            }});
             streamVideo = await navigator.mediaDevices.getUserMedia({video:true});
 
             mediaStream.addTrack(streamAudio.getAudioTracks()[0]);
@@ -113,7 +118,7 @@ const Preparo = {
                 // return window.location.replace('/');
             }else{
                 if (streamAudio) mediaStream.addTrack(streamAudio.getAudioTracks()[0]);
-                if (streamVideo) mediaStream.addTrack(streamVideo.getVideoTracks()[0]);
+                (streamVideo) ? mediaStream.addTrack(streamVideo.getVideoTracks()[0]) : showNotification('Problema na captura da Câmera!');
             }
         }
 

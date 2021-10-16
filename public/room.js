@@ -137,20 +137,20 @@ document.addEventListener('DOMContentLoaded', () => {
         const btnExit = document.querySelector('.btn-exit');
 
         // verificando estado das mídias
-        if(state.stream.getAudioTracks()[0] && !state.stream.getAudioTracks()[0].enabled) {
+        if(!state.stream.getAudioTracks()[0] || !state.stream.getAudioTracks()[0].enabled) {
             state.mymic = false;
             btnMic.classList.remove('btn-mic-active');
         }
-        if(state.stream.getVideoTracks()[0] && !state.stream.getVideoTracks()[0].enabled) {
+        if(!state.stream.getVideoTracks()[0] || !state.stream.getVideoTracks()[0].enabled) {
             state.mycam = false;
-            btnMic.classList.remove('btn-cam-active');
+            btnCam.classList.remove('btn-cam-active');
         }
 
         // eventos de botões
         
         // cam
         btnCam.addEventListener('click', () => {
-            if (state.stream.getVideoTracks()[0]===null) return showNotification('Câmera não está ativa!');
+            if (!state.stream.getVideoTracks()[0]) return showNotification('Câmera não está ativa!');
             
             state.mycam = !state.mycam;
             state.stream.getVideoTracks()[0].enabled = !state.stream.getVideoTracks()[0].enabled;
@@ -215,20 +215,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 const screenSharing = await navigator.mediaDevices.getDisplayMedia({
-                    video: true,
-                    audio: true
+                    video: {
+                        cursor: "always"
+                    },
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        sampleRate: 44100
+                    }
                 });
 
                 state.myscreen = !state.myscreen;
                 (state.myscreen) ? btnScreen.classList.add('btn-screen-active') : btnScreen.classList.remove('btn-screen-active');
-
-                    // caso a tela já esteja sendo compartilhada substitui
-                // if (Object.keys(state.screenSharingSender).length>0) {
-                    // suspendendo por enquanto a atualização de uma tela já compartilhada
-                    // return state.peerConnectionsIds.forEach(pcId => {
-                    //     state.screenSharingSender[pcId].replaceTrack(screenSharing.getVideoTracks()[0]);
-                    // });
-                // }
                 
                 state.screenSharing = screenSharing;
                 
@@ -396,6 +394,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     showNotification(`${h1.innerText} colocado em foco.`);
                 }
 
+                AudioEffect.play('popup');
+
                 // calculando no evento de click do infocus
                 // calcVideosStyle();
             }
@@ -503,6 +503,9 @@ document.addEventListener('DOMContentLoaded', () => {
         .then((answer) => {
             state.peerConnections[pcId].setLocalDescription(answer);
             socket.emit('answer', answer, pcId);
+
+            // enviando status de mute do mic
+            socket.emit('mic-cam-toggle', slug, state.mymic, state.mycam);
         })
         .catch((err) => {
             console.error(err);
@@ -520,8 +523,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     socket.on('answer', (answer, pcId) => {
         state.peerConnections[pcId].setRemoteDescription(answer);
-        // enviando status de mute do mic
-        socket.emit('mic-cam-toggle', slug, state.mymic, state.mycam)
     });
 
     stopOutherStream = (pcId) => {
