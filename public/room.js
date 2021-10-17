@@ -1,3 +1,4 @@
+let channel = null;
 document.addEventListener('DOMContentLoaded', () => {
 
     // state
@@ -143,12 +144,14 @@ document.addEventListener('DOMContentLoaded', () => {
             <button class="btn-cam btn-cam-active" title="Mutar Câmera"></button>
             <button class="btn-mic btn-mic-active" title="Mutar Microfone"></button>
             <button class="btn-screen" title="Compartilhar Tela"></button>
+            <button class="btn-message" title="Mensagens"></button>
             <button class="btn-exit" title="Sair da Sala"></button>
         `;
 
         const btnCam = document.querySelector('.btn-cam');
         const btnMic = document.querySelector('.btn-mic');
         const btnScreen = document.querySelector('button.btn-screen');
+        const btnMessage = document.querySelector('button.btn-message');
         const btnExit = document.querySelector('.btn-exit');
 
         // verificando estado das mídias
@@ -282,6 +285,11 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (e) {
                 console.error('O usuário não deu permissão de compartilhar a tela ou cancelou.', e); 
             }
+        });
+
+        // message
+        btnMessage.addEventListener('click', (e) => {
+            console.log('show messages');
         });
 
         // exit

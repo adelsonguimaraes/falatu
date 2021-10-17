@@ -109,7 +109,7 @@ button:hover {
     z-index: 1;
 }
 .logo-room img{
-    max-width: 5rem;
+    max-width: 3rem
 }
 
 .outher {
@@ -169,15 +169,16 @@ button:hover {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    position: fixed;
-    bottom: 50px;
-    z-index: 1;
+    /* position: fixed; */
+    /* bottom: 50px; */
+    /* z-index: 1; */
+    padding: 5px;
 }
 
 .buttons-cam button {
-    margin: 10px 30px;
-    max-width: 55px;
-    max-height: 55px;
+    margin: 0px 10px;
+    max-width: 30px;
+    max-height: 30px;
     border-radius: 50px;
     transition: .5s;
     box-shadow: 0px 0px 5px 0px #000;
@@ -214,6 +215,14 @@ button:hover {
 }
 .btn-screen-active {
     background-image: url(./assets/images/btn_screen.png) !important;
+}
+
+.buttons-cam .btn-message {
+    background-image: url(./assets/images/btn_message.png);
+    background-repeat: no-repeat;
+    background-position: center;
+    /* background-size: 55px; */
+    background-size: cover;
 }
 
 .buttons-cam .btn-exit {
@@ -354,7 +363,7 @@ button:hover {
     color: #DE9424;
 }
 .preparo .cam {
-    flex: 1;
+    flex: 400px;
     width: 100%;
     max-height: 335px;
     background: black;
@@ -439,7 +448,9 @@ button:hover {
     }
 
     .outher:hover {
-        transform: scale(1.02);
+        /* transform: scale(1.02); */
+        opacity: 0.6;
+        border: 1px solid #fff;
     }
 
     .infocus .outher:hover {
@@ -467,10 +478,10 @@ button:hover {
         margin: 3px;
         cursor: pointer;
     }
-    .outher h1 {
+    /* .outher h1 {
         background: darkmagenta;
         font-size: 20px;
-    }
+    } */
     .video-box {
         flex-direction: row;
     }
