@@ -58,7 +58,7 @@ io.on('connection', (socket) => {
             socket.join(r);
             // enviando sinal para o socket
             // de entrada na sala
-            socket.emit('joined', socket.id, alias);
+            socket.emit('joined', socket.id, alias, messages);
             console.log('Room Joined');
 
         // or room fully

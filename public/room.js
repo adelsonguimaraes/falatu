@@ -505,7 +505,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // quando a segunda pessoa entra
         // socket.emit('ready', slug, state.id);
     });
-    socket.on('joined', async (idSocket, alias) => {
+    socket.on('joined', async (idSocket, alias, messages) => {
         state.creator = false;
         state.id = idSocket;
         
@@ -513,6 +513,8 @@ document.addEventListener('DOMContentLoaded', () => {
         addNewVideoElement(state.stream, 0, alias);
         // adicionando botões de chamada
         adicionaButtons();
+
+        addMessages(messages);
         
         AudioEffect.play('join');
         // quando a segunda pessoa entra
@@ -602,6 +604,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const a = document.createElement('a');
             a.classList.add('alert');
             btnMessage.appendChild(a);
+
+            AudioEffect.play('message');
         }
     };
 

@@ -461,6 +461,7 @@ button:hover {
     transition: .5s;
     display: flex;
     flex-direction: column;
+    z-index: 1;
 }
 .bar-active {
     right: 0;
