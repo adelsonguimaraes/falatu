@@ -605,8 +605,8 @@ document.addEventListener('DOMContentLoaded', () => {
             a.classList.add('alert');
             btnMessage.appendChild(a);
 
-            AudioEffect.play('message');
         }
+        (!barActive) ?? AudioEffect.play('message');
     };
 
     socket.on('message', (messages) => {
