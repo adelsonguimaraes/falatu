@@ -58,7 +58,7 @@ io.on('connection', (socket) => {
             socket.join(r);
             // enviando sinal para o socket
             // de entrada na sala
-            socket.emit('joined', socket.id, alias, messages);
+            socket.emit('joined', socket.id, alias, messages[r]);
             console.log('Room Joined');
 
         // or room fully
@@ -130,10 +130,11 @@ io.on('connection', (socket) => {
         const m = ('0'+date.getMinutes()).slice(-2);
         const msg = {'alias': aliases[socket.id], 'horario': `${h}:${m}`, 'message': message};
         
-        messages.push(msg);
+        if (!messages[r]) messages[r] = [];
+        messages[r].push(msg);
         
-        socket.emit('message', messages);
-        socket.broadcast.to(r).emit('message', messages);
+        socket.emit('message', messages[r]);
+        socket.broadcast.to(r).emit('message', messages[r]);
     });
     
     // pegando o evento de desconexão
