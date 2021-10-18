@@ -24,6 +24,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const outhers = document.querySelector('div .outhers');
     const buttonsBox = document.querySelector('.buttons-cam');
     const notification = document.querySelector('.notification');
+    const bar = document.querySelector('div.bar');
+    const barClose = document.querySelector('a.close');
 
     // ice servers
     const iceServers = {
@@ -153,6 +155,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const btnScreen = document.querySelector('button.btn-screen');
         const btnMessage = document.querySelector('button.btn-message');
         const btnExit = document.querySelector('.btn-exit');
+        const btnEnviar = document.getElementById('btn_enviar');
+        const inputEnviar = document.getElementById('input_message');
 
         // verificando estado das mídias
         if(!state.stream.getAudioTracks()[0] || !state.stream.getAudioTracks()[0].enabled) {
@@ -289,7 +293,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // message
         btnMessage.addEventListener('click', (e) => {
-            console.log('show messages');
+            bar.classList.add('bar-active');
+            // removendo alert
+            if(btnMessage.querySelector('a.alert')) btnMessage.querySelector('a.alert').remove();
+        });
+
+        // close message
+        barClose.addEventListener('click', (e) => {
+            bar.classList.remove('bar-active');
+        });
+
+        // send message
+        btnEnviar.addEventListener('click', (e) => {
+            socket.emit('message', slug, inputEnviar.value);
+            inputEnviar.value = '';
+        });
+
+        // send message enter
+        inputEnviar.addEventListener('keyup', (e) => {
+            if (e.code === 'Enter') {
+                socket.emit('message', slug, inputEnviar.value);
+                inputEnviar.value = '';
+            }
         });
 
         // exit
@@ -537,6 +562,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error(err);
         });
     });
+
     socket.on('offer-screen-sharing', async (offer, pcId, alias) => {
         showNotification(`${alias} iniciou um compartilhamento de tela.`);
 
@@ -550,6 +576,37 @@ document.addEventListener('DOMContentLoaded', () => {
     socket.on('answer', (answer, pcId, statusMic, statusCam) => {
         state.peerConnections[pcId].setRemoteDescription(answer);
         setMediaStatus(pcId, statusMic, statusCam);
+    });
+
+    const addMessages = (messages) => {
+        const barContent = document.querySelector('div.bar div.bar-content');
+        
+        let msg = '';
+        messages.forEach(e => {
+             msg += `
+                <div class="message">
+                    <label>
+                        ${e.alias}:
+                        <span>${e.horario}</span>
+                    </label>
+                    <p>${e.message}</p>
+                </div>
+            `;
+        });
+        barContent.innerHTML = msg;
+        barContent.scrollTo(0, barContent.offsetHeight);
+
+        const btnMessage = document.querySelector('button.btn-message');
+        const barActive = document.querySelector('.bar-active');
+        if (!btnMessage.querySelector('.alert') && !barActive) {
+            const a = document.createElement('a');
+            a.classList.add('alert');
+            btnMessage.appendChild(a);
+        }
+    };
+
+    socket.on('message', (messages) => {
+        addMessages(messages);
     });
 
     stopOutherStream = (pcId) => {

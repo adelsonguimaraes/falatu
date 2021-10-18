@@ -22,6 +22,7 @@ server.listen(PORT, () => {
 });
 
 const aliases = [];
+const messages = [];
 
 // events for socket
 io.on('connection', (socket) => {
@@ -121,6 +122,18 @@ io.on('connection', (socket) => {
 
     socket.on('mic-cam-toggle', (r, statusMic, statusCam) => {
         socket.broadcast.to(r).emit('mic-cam-toggle', socket.id, statusMic, statusCam);
+    });
+
+    socket.on('message', (r, message) => {
+        const date = new Date;
+        const h = ('0'+date.getHours()).slice(-2);
+        const m = ('0'+date.getMinutes()).slice(-2);
+        const msg = {'alias': aliases[socket.id], 'horario': `${h}:${m}`, 'message': message};
+        
+        messages.push(msg);
+        
+        socket.emit('message', messages);
+        socket.broadcast.to(r).emit('message', messages);
     });
     
     // pegando o evento de desconexão
