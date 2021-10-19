@@ -581,7 +581,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     const addMessages = (messages) => {
-        if (messages)
+        if (!messages) return false;
 
         const barContent = document.querySelector('div.bar div.bar-content');
         
