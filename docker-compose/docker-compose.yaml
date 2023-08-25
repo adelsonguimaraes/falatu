@@ -1,0 +1,18 @@
+version: '3'
+
+services:
+  nodejs:
+    image: adelsonguimaraes/falatu:latest
+    container_name: falatu
+    expose:
+      - 4000
+    environment:
+      LETSENCRYPT_HOST: falatu.adelsonguimaraes.com.br
+      VIRTUAL_HOST: falatu.adelsonguimaraes.com.br
+      VIRTUAL_PORT: 4000
+    restart: always
+
+networks:
+  default:
+    external:
+      name: nginx-proxy
